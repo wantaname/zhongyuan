@@ -110,7 +110,7 @@ export function createFolder(params: ICreateFolderParams) {
     url: '/api/v1/file/create',
     data: {
       ...params,
-      documentType: 'FOLDER',
+      fileType: 'FOLDER',
     },
   })
 }
