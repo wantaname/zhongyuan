@@ -30,6 +30,16 @@ export interface FileItem {
   url: string
 }
 
+/** test */
+const getTestTags = (count: number) => {
+  let i = 0
+  return Array(count).fill({
+    id: i++,
+    name: '标签' + i,
+    createTime: Date.now(),
+  })
+}
+
 interface FolderInfo {
   /** 每个文件夹或者文件的唯一id */
   fileId: string
@@ -67,7 +77,7 @@ export function getFolder(folderId?: string): Promise<{ folder: FileItem; files:
         documentType: null,
         updateTime: data.updateTime,
         url: '',
-        tags: null,
+        tags: [],
       },
       files: data.files.map((item) => ({
         fileId: item.fileId,
@@ -80,7 +90,7 @@ export function getFolder(folderId?: string): Promise<{ folder: FileItem; files:
         documentType: item.documentType,
         updateTime: item.updateTime,
         url: item.url || '',
-        tags: item.tags,
+        tags: item.tags || [],
       })),
     }
   })
@@ -188,14 +198,58 @@ export interface ISearchFileParams {
   documentType?: string[]
 }
 
-export interface ISearchResItem {}
+export interface ISearchResItem {
+  content: string
+  createTime: number
+  description: string
+  documentType: string
+  fileId: string
+  fileSize: number
+  fileType: null
+  folderId: string
+  name: string
+  tags: Tag[]
+  updateTime: number
+  url: string
+}
 
 /** 搜索文件 */
 export function searchFile(params: ISearchFileParams): Promise<ISearchResItem[]> {
-  return request({
+  return request<any, { items: ISearchResItem[] }>({
     method: 'post',
     url: '/api/v1/file/search',
     data: {
+      ...params,
+    },
+  }).then((res) => {
+    res.items = res.items || []
+    res.items.forEach((item) => {
+      item.content = item.content || ''
+      item.tags = item.tags || []
+      item.url = item.url || ''
+      item.description = item.description || ''
+    })
+    return res.items
+  })
+}
+
+/** 删除文件 */
+export function deleteFile(params: { fileId: string }): Promise<any> {
+  return request({
+    method: 'get',
+    url: '/api/v1/file/delete',
+    params: {
+      ...params,
+    },
+  })
+}
+
+/** 重命名文件 */
+export function renameFile(params: { fileId: string; name: string }): Promise<any> {
+  return request({
+    method: 'post',
+    url: '/api/v1/file/update',
+    params: {
       ...params,
     },
   })

@@ -11,11 +11,13 @@ import Tree from 'primevue/tree'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 import {
   createFolder,
+  deleteFile,
   downloadFile,
   getFolder,
   postAddTag,
   postSaveFile,
   putFile,
+  renameFile,
   searchFile,
   searchTags,
   type FileItem,
@@ -190,9 +192,53 @@ const clickUpload = (e: MouseEvent) => {
 const showFileSaveDialog = ref(false)
 const fileSaveData = ref<IPutFileRes | null>(null)
 
+const ShowRenameFileDialog = ref(false)
+const fileRenameData = ref<{ fileId: string; oldName: string; newName: string }>({
+  fileId: '',
+  oldName: '',
+  newName: '',
+})
+
 /** 取消保存 */
 const clickCancelSave = async () => {
   showFileSaveDialog.value = false
+}
+
+const clickConfirmRename = async () => {
+  renameFile({
+    fileId: fileRenameData.value.fileId,
+    name: fileRenameData.value.newName,
+  })
+    .then(() => {
+      toast.add({
+        severity: 'success',
+        summary: '修改成功',
+        detail: `${fileRenameData.value.oldName}->${fileRenameData.value.newName}`,
+        life: 2000,
+      })
+      ShowRenameFileDialog.value = false
+      if (!isSearchMode.value) {
+        const idx = tableData.value.findIndex((item) => item.fileId === fileRenameData.value.fileId)
+        if (idx !== -1) {
+          tableData.value[idx].name = fileRenameData.value.newName
+        }
+      } else {
+        const idx = searchResData.value.findIndex(
+          (item) => item.fileId === fileRenameData.value.fileId,
+        )
+        if (idx !== -1) {
+          searchResData.value[idx].name = fileRenameData.value.newName
+        }
+      }
+    })
+    .catch((err) => {
+      toast.add({
+        severity: 'error',
+        summary: '修改失败',
+        detail: `${err.message}`,
+        life: 2000,
+      })
+    })
 }
 /** 确认保存 */
 const clickConfirmSave = async () => {
@@ -291,6 +337,15 @@ const onRowClick = (ev: DataTableRowClickEvent) => {
     openFolder(row.fileId)
   }
 }
+
+const onClickRowAction = (ev: MouseEvent, data: FileItem) => {
+  contextSelectRow.value = data
+  /** 打开context菜单 */
+  tableCMenu.value!.toggle(ev)
+  ev.stopPropagation()
+  ev.preventDefault()
+}
+
 const onRowContext = (ev: DataTableRowContextMenuEvent) => {
   /** 记录点击的数据 */
   contextSelectRow.value = ev.data
@@ -330,15 +385,48 @@ const handleContextClick = (ev: MenuItemCommandEvent) => {
     openFolder(contextSelectRow.value!.fileId)
   } else if (ev.item.label === '下载') {
     downloadUrl(contextSelectRow.value!.url, contextSelectRow.value!.name)
+  } else if (ev.item.label === '删除') {
+    deleteFile({ fileId: contextSelectRow.value!.fileId }).then(() => {
+      toast.add({
+        severity: 'success',
+        summary: '删除成功',
+        life: 2000,
+      })
+      if (!isSearchMode.value) {
+        return onFileStatusChange()
+      }
+      /** 从文件列表移除 */
+      const delIdx = searchResData.value.findIndex(
+        (item) => item.fileId === contextSelectRow.value!.fileId,
+      )
+      if (delIdx !== -1) {
+        searchResData.value.splice(delIdx, 1)
+      }
+    })
+  } else if (ev.item.label === '重命名') {
+    fileRenameData.value.oldName = contextSelectRow.value!.name
+    fileRenameData.value.newName = ''
+    fileRenameData.value.fileId = contextSelectRow.value!.fileId
+    ShowRenameFileDialog.value = true
   }
 }
 
 const contextItems = computed<MenuItem[]>(() => {
-  if (contextSelectRow.value?.fileType === 'DOCUMENT') {
+  if (contextSelectRow.value?.fileType === 'DOCUMENT' || isSearchMode.value) {
     return [
       {
         label: '下载',
         icon: 'pi pi-cloud-download',
+        command: handleContextClick,
+      },
+      {
+        label: '删除',
+        icon: 'pi pi-delete-left',
+        command: handleContextClick,
+      },
+      {
+        label: '重命名',
+        icon: 'pi pi-file-edit',
         command: handleContextClick,
       },
     ]
@@ -347,6 +435,16 @@ const contextItems = computed<MenuItem[]>(() => {
     {
       label: '打开',
       icon: 'pi pi-folder-open',
+      command: handleContextClick,
+    },
+    {
+      label: '删除',
+      icon: 'pi pi-delete-left',
+      command: handleContextClick,
+    },
+    {
+      label: '重命名',
+      icon: 'pi pi-file-edit',
       command: handleContextClick,
     },
   ]
@@ -422,8 +520,7 @@ const clickCloseSearch = () => {
   searchValue.value = ''
 }
 
-/** 上传文件后，更新状态 */
-const onCreateFile = async () => {
+const onFileStatusChange = async () => {
   /** 刷新当前节点的信息 */
   const res = await getFolder(currFolderId.value)
   selectedNode.value!.children = res.files
@@ -442,23 +539,13 @@ const onCreateFile = async () => {
   getTableData()
 }
 
+/** 上传文件后，更新状态 */
+const onCreateFile = async () => {
+  onFileStatusChange()
+}
+
 const onCreateFolder = async () => {
-  /** 刷新当前节点的信息 */
-  const res = await getFolder(currFolderId.value)
-  selectedNode.value!.children = res.files
-    .filter((item) => item.fileType === 'FOLDER')
-    .map((it) => {
-      return {
-        key: it.fileId,
-        label: it.name,
-        icon: 'pi pi-folder',
-        data: it,
-        /** 文件夹没有子文件 */
-        leaf: it.fileSize === 0,
-        loading: false,
-      }
-    })
-  getTableData()
+  onFileStatusChange()
 }
 
 const isSearchMode = computed(() => {
@@ -556,7 +643,6 @@ let sid = 0 as any
 
 const startSearchFile = async () => {
   if (!searchParams.value) return
-  // test
   const res = await searchFile({ ...searchParams.value })
   searchResData.value = res
 }
@@ -616,15 +702,15 @@ watch(searchParams, onSearch, { deep: true })
         <div class="action">
           <div class="upload">
             <Button
-              icon="pi pi-angle-down"
-              label="上传"
+              icon="pi pi-cloud-upload"
+              label="上传文件"
+              icon-pos="left"
               severity="secondary"
-              @click="clickUpload"
-              iconPos="right"
+              @click="startUploadFile"
               raised
               aria-controls="overlay_upload_menu"
             />
-            <TieredMenu ref="uploadMenu" id="overlay_upload_menu" :model="uploadItems" popup />
+            <!-- <TieredMenu ref="uploadMenu" id="overlay_upload_menu" :model="uploadItems" popup /> -->
           </div>
           <div class="new" style="margin-left: 20px">
             <create-folder-btn
@@ -663,14 +749,33 @@ watch(searchParams, onSearch, { deep: true })
                     v-show="slotProps.data.fileType === 'DOCUMENT'"
                   ></Icon>
                   <span>{{ slotProps.data.name }}</span>
+                  <span>
+                    <Tag
+                      style="margin-left: 10px; margin-top: 2px"
+                      severity="info"
+                      :value="item.name"
+                      v-for="(item, idx) in slotProps.data.tags || []"
+                      :key="idx"
+                    >
+                    </Tag>
+                  </span>
                 </div>
               </template>
             </Column>
-            <Column field="updateTime" header="修改时间">
+            <Column field="updateTime" header="修改时间" style="width: 200px">
               <template #body="slotProps">
                 {{ formatTimestamp(slotProps.data.updateTime) }}
               </template></Column
             >
+            <Column header="" style="width: 100px">
+              <template #body="slotProps">
+                <Button
+                  @click="onClickRowAction($event, slotProps.data)"
+                  label=". . ."
+                  severity="secondary"
+                  variant="text"
+                /> </template
+            ></Column>
           </DataTable>
         </div>
       </div>
@@ -683,20 +788,15 @@ watch(searchParams, onSearch, { deep: true })
               v-model="selectedTags"
               :options="tagOptions"
               optionLabel="name"
+              display="chip"
+              show-clear
               filter
+              :max-selected-labels="8"
               @filter="onTagInput"
               placeholder="选择标签"
-              :maxSelectedLabels="3"
-              class="w-full md:w-80"
+              style="width: 400px"
               emptyFilterMessage="标签不存在，按回车添加"
               empty-message="请输入标签名搜索"
-            />
-            <Button
-              @click="clearTagSelect"
-              v-show="selectedTags.length"
-              label="清除"
-              severity="secondary"
-              variant="text"
             />
           </div>
           <div class="flex items-center gap-4 mb-4">
@@ -743,6 +843,7 @@ watch(searchParams, onSearch, { deep: true })
             @row-contextmenu="onRowContext"
             @row-click="onRowClick"
             :row-class="getRowClass"
+            :show-headers="false"
           >
             <template #header>
               <div class="flex flex-wrap items-center justify-start gap-2">
@@ -755,25 +856,41 @@ watch(searchParams, onSearch, { deep: true })
                 />
               </div>
             </template>
-            <Column field="name" header="文件名">
-              <template #body="slotProps: { data: FileItem }">
-                <div class="file-name">
-                  <Icon
-                    v-show="slotProps.data.fileType === 'FOLDER'"
-                    icon="material-symbols:folder"
-                    color="#5dade2"
-                    width="28"
-                  ></Icon>
-                  <Icon
-                    icon="bx:file"
-                    color="#cccccc"
-                    width="28"
-                    v-show="slotProps.data.fileType === 'DOCUMENT'"
-                  ></Icon>
+            <Column field="name" header="">
+              <template #body="slotProps: { data: ISearchResItem }">
+                <div class="file-name" style="font-size: 1.25rem">
+                  <Icon icon="bx:file" color="#cccccc" width="28"></Icon>
                   <span>{{ slotProps.data.name }}</span>
+                  <span>
+                    <Tag
+                      style="margin-left: 10px; margin-top: 2px"
+                      severity="info"
+                      :value="item.name"
+                      v-for="(item, idx) in slotProps.data.tags || []"
+                      :key="idx"
+                    >
+                    </Tag>
+                  </span>
+                </div>
+                <div class="card flex flex-wrap gap-4">
+                  <Message
+                    style="margin-left: 30px; margin-top: 10px"
+                    severity="secondary"
+                    variant="simple"
+                    >{{ slotProps.data.description }}</Message
+                  >
                 </div>
               </template>
             </Column>
+            <Column header="" style="width: 100px">
+              <template #body="slotProps">
+                <Button
+                  @click="onClickRowAction($event, slotProps.data)"
+                  label=". . ."
+                  severity="secondary"
+                  variant="text"
+                /> </template
+            ></Column>
 
             <template #footer> 共有 {{ searchResData.length }} 条搜索结果 </template>
           </DataTable>
@@ -814,6 +931,44 @@ watch(searchParams, onSearch, { deep: true })
       <div class="flex justify-end gap-2">
         <Button type="button" label="取消" severity="secondary" @click="clickCancelSave"></Button>
         <Button type="button" label="确认" @click="clickConfirmSave"></Button>
+      </div>
+    </Dialog>
+
+    <Dialog
+      v-model:visible="ShowRenameFileDialog"
+      modal
+      header="文件重命名"
+      :style="{ width: '32rem' }"
+    >
+      <div class="flex items-center gap-4 mb-4" style="margin-top: 10px">
+        <label class="w-24">旧名</label>
+        <InputText
+          placeholder=""
+          v-model="fileRenameData!.oldName"
+          id="name"
+          class="flex-auto"
+          disabled
+          autocomplete="off"
+        />
+      </div>
+      <div class="flex items-center gap-4 mb-4" style="margin-top: 10px">
+        <label class="w-24">新名</label>
+        <InputText
+          placeholder=""
+          v-model="fileRenameData!.newName"
+          id="name"
+          class="flex-auto"
+          autocomplete="off"
+        />
+      </div>
+      <div class="flex justify-end gap-2">
+        <Button
+          type="button"
+          label="取消"
+          severity="secondary"
+          @click="ShowRenameFileDialog = false"
+        ></Button>
+        <Button type="button" label="确认" @click="clickConfirmRename"></Button>
       </div>
     </Dialog>
   </div>
