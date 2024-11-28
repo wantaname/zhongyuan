@@ -7,16 +7,13 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    Avatar: typeof import('primevue/avatar')['default']
     Breadcrumb: typeof import('primevue/breadcrumb')['default']
     Button: typeof import('primevue/button')['default']
     Column: typeof import('primevue/column')['default']
     ContextMenu: typeof import('primevue/contextmenu')['default']
     DataTable: typeof import('primevue/datatable')['default']
+    DatePicker: typeof import('primevue/datepicker')['default']
     Dialog: typeof import('primevue/dialog')['default']
-    Divider: typeof import('primevue/divider')['default']
-    FloatLabel: typeof import('primevue/floatlabel')['default']
-    HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
     IconCommunity: typeof import('./src/components/icons/IconCommunity.vue')['default']
     IconDocumentation: typeof import('./src/components/icons/IconDocumentation.vue')['default']
     IconEcosystem: typeof import('./src/components/icons/IconEcosystem.vue')['default']
@@ -28,15 +25,11 @@ declare module 'vue' {
     InputText: typeof import('primevue/inputtext')['default']
     Message: typeof import('primevue/message')['default']
     MultiSelect: typeof import('primevue/multiselect')['default']
-    RadioButton: typeof import('primevue/radiobutton')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    SplitButton: typeof import('primevue/splitbutton')['default']
-    Tag: typeof import('primevue/tag')['default']
+    SelectButton: typeof import('primevue/selectbutton')['default']
     Textarea: typeof import('primevue/textarea')['default']
-    TheWelcome: typeof import('./src/components/TheWelcome.vue')['default']
     TieredMenu: typeof import('primevue/tieredmenu')['default']
     Toast: typeof import('primevue/toast')['default']
-    WelcomeItem: typeof import('./src/components/WelcomeItem.vue')['default']
   }
 }

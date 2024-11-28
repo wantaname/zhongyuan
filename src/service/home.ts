@@ -3,7 +3,7 @@ import request from '@/utils/request'
 export interface Tag {
   id: number
   name: string
-  createTime: string
+  createTime: number
 }
 
 /** 文件/文件夹信息 */
@@ -115,8 +115,14 @@ export function createFolder(params: ICreateFolderParams) {
   })
 }
 
+export interface IPutFileRes {
+  url: string
+  name: string
+  documentType: string
+  size: number
+}
 /** 上传文件 */
-export function putFile(file: File) {
+export function putFile(file: File): Promise<IPutFileRes> {
   const formData = new FormData()
   formData.append('file', file)
   return request({
@@ -129,9 +135,68 @@ export function putFile(file: File) {
   })
 }
 
-export function getAllTags(): Promise<Tag[]> {
+export function searchTags(name: string): Promise<Tag[]> {
   return request({
     method: 'get',
     url: '/api/v1/tag/search',
+    params: { name },
+  })
+}
+
+interface IPostSaveFileParams {
+  fileId?: string
+  folderId: string
+  name: string
+  description?: string
+  fileSize: number
+  url: string
+  documentType: string
+  createTime?: number
+  updateTime?: number
+}
+
+/** 保存文件 */
+export function postSaveFile(params: IPostSaveFileParams) {
+  return request({
+    method: 'post',
+    url: '/api/v1/file/create',
+    data: {
+      ...params,
+      fileType: 'DOCUMENT',
+    },
+  })
+}
+
+/** 创建标签 */
+/** 创建文件夹 */
+export function postAddTag(params: Tag) {
+  return request({
+    method: 'post',
+    url: '/api/v1/tag/add',
+    data: params,
+  })
+}
+
+export interface ISearchFileParams {
+  folderId: string
+  startTime: number | null
+  endTime: number | null
+  keyword: string
+  tags: Tag[]
+  condition: string
+  sortBy: string
+  documentType?: string[]
+}
+
+export interface ISearchResItem {}
+
+/** 搜索文件 */
+export function searchFile(params: ISearchFileParams): Promise<ISearchResItem[]> {
+  return request({
+    method: 'post',
+    url: '/api/v1/file/search',
+    data: {
+      ...params,
+    },
   })
 }

@@ -24,8 +24,7 @@ service.interceptors.response.use(
     // 只返回数据部分
     const res = response.data
     if (res.code !== 200) {
-      console.error(res.message || 'Error')
-      return Promise.reject(new Error(res.message || 'Error'))
+      return Promise.reject(new Error(res.msg || 'Error'))
     }
     return res.data
   },

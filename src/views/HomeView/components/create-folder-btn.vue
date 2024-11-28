@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { createFolder } from '@/service.ts/home'
+import { createFolder } from '@/service/home'
 import { useToast } from 'primevue/usetoast'
 import { ref } from 'vue'
 
@@ -36,7 +36,7 @@ const clickConfirm = async () => {
     description: form.value.desc,
   })
   emit('created', form.value)
-  toast.add({ severity: 'success', summary: '创建成功', detail: `{form.value.name}`, life: 2000 })
+  toast.add({ severity: 'success', summary: '创建成功', detail: `${form.value.name}`, life: 2000 })
   clickCancel()
 }
 </script>

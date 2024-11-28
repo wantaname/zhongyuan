@@ -4,6 +4,7 @@ import { RouterLink, RouterView } from 'vue-router'
 
 <template>
   <RouterView />
+  <Toast></Toast>
 </template>
 
 <style scoped>
