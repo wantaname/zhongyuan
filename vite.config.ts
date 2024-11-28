@@ -6,8 +6,8 @@ import Components from 'unplugin-vue-components/vite'
 import {PrimeVueResolver} from '@primevue/auto-import-resolver'
 // https://vite.dev/config/
 
-const proxyTarget = 'http://127.0.0.1:8080/';
-// const proxyTarget = 'http://124.220.149.108:8080/';
+// const proxyTarget = 'http://127.0.0.1:8080/';
+const proxyTarget = 'http://124.220.149.108:8080/';
 export default defineConfig({
   plugins: [
     vue(),
