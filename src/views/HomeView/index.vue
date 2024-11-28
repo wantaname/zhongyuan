@@ -4,25 +4,34 @@ import type {
   ContextMenu,
   DataTableRowClickEvent,
   DataTableRowContextMenuEvent,
+  MultiSelectFilterEvent,
   TieredMenu,
 } from 'primevue'
 import Tree from 'primevue/tree'
-import { computed, nextTick, onMounted, ref, watch, watchEffect } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 import {
   createFolder,
   downloadFile,
-  getAllTags,
   getFolder,
+  postAddTag,
+  postSaveFile,
   putFile,
+  searchFile,
+  searchTags,
   type FileItem,
+  type IPutFileRes,
+  type ISearchFileParams,
+  type ISearchResItem,
   type Tag,
-} from '@/service.ts/home'
+} from '@/service/home'
 import type { TreeNode } from 'primevue/treenode'
 import type { MenuItem, MenuItemCommandEvent } from 'primevue/menuitem'
 import createFolderBtn from './components/create-folder-btn.vue'
 import { downloadUrl, formatTimestamp, selectLocalFile } from './utils'
 import { Icon } from '@iconify/vue'
+import { useToast } from 'primevue/usetoast'
 
+const toast = useToast()
 type FileId = string
 
 /** 当前激活的文件夹id */
@@ -55,6 +64,11 @@ const selectedNode = computed(() => {
   } else {
     return getNodeByKey(currFolderId.value, folderNodes.value[0])
   }
+})
+
+const currFolderItem = computed<null | FileItem>(() => {
+  if (!selectedNode.value) return null
+  return selectedNode.value.data
 })
 
 const getNodeByKey = (key: string, treeNode?: TreeNode): TreeNode | null => {
@@ -96,20 +110,11 @@ const onNodeSelect = (node: TreeNode) => {
 const onNodeUnSelect = (node: TreeNode) => {}
 
 const onNodeCollapse = (node: TreeNode) => {
-  console.log('折叠', node)
   currExpandFolderIds.value = currExpandFolderIds.value.filter((it) => it !== node.key)
-}
-
-const onSelectedKeyChange = () => {
-  // selectedKey.value = d
 }
 
 /** 默认展开一级 */
 const folderNodes = ref<TreeNode[]>([])
-
-const home = ref({
-  icon: 'pi pi-home',
-})
 
 const getRootData = async () => {
   const res = await getFolder()
@@ -157,16 +162,18 @@ const onNodeExpand = async (node: TreeNode) => {
   }
   node.loading = true
   const res = await getFolder(node.key)
-  node.children = res.files.map((it) => {
-    return {
-      key: it.fileId,
-      label: it.name,
-      icon: 'pi pi-folder',
-      leaf: it.fileSize === 0,
-      data: it,
-      loading: false,
-    }
-  })
+  node.children = res.files
+    .filter((item) => item.fileType === 'FOLDER')
+    .map((it) => {
+      return {
+        key: it.fileId,
+        label: it.name,
+        icon: 'pi pi-folder',
+        leaf: it.fileSize === 0,
+        data: it,
+        loading: false,
+      }
+    })
   node.loading = false
   /** 展开 */
   makeExpandFolder(node.key)
@@ -175,15 +182,78 @@ const onNodeExpand = async (node: TreeNode) => {
 /** 由currKey得到当前节点TreeNode */
 
 const uploadMenu = ref<InstanceType<typeof TieredMenu> | null>(null)
-const newMenu = ref<InstanceType<typeof TieredMenu> | null>(null)
 
 const clickUpload = (e: MouseEvent) => {
   uploadMenu.value?.toggle(e)
 }
 
+const showFileSaveDialog = ref(false)
+const fileSaveData = ref<IPutFileRes | null>(null)
+
+/** 取消保存 */
+const clickCancelSave = async () => {
+  showFileSaveDialog.value = false
+}
+/** 确认保存 */
+const clickConfirmSave = async () => {
+  if (!currFolderId.value) return
+  await postSaveFile({
+    folderId: currFolderId.value,
+    name: fileSaveData.value!.name,
+    fileSize: fileSaveData.value!.size,
+    documentType: fileSaveData.value!.documentType,
+    url: fileSaveData.value!.url,
+    createTime: Date.now(),
+    updateTime: Date.now(),
+  })
+    .then(() => {
+      toast.add({
+        severity: 'success',
+        summary: '上传成功',
+        detail: `${fileSaveData.value?.name}`,
+        life: 2000,
+      })
+      showFileSaveDialog.value = false
+      onCreateFile()
+    })
+    .catch((err) => {
+      toast.add({
+        severity: 'error',
+        summary: '保存失败',
+        detail: `${err.message}`,
+        life: 2000,
+      })
+    })
+}
+
+const mockUploadFile = async () => {
+  fileSaveData.value = {
+    url: '2024-11-28/1436851332_ES文件检索管理系统-初步清单.xlsx',
+    name: 'ES文件检索管理系统-初步清单.xlsx',
+    documentType: 'EXCEL',
+    size: 11557,
+  }
+  showFileSaveDialog.value = true
+}
 const startUploadFile = async () => {
+  // mockUploadFile()
+  // return
   const file = await selectLocalFile({ accept: '*' })
-  await putFile(file)
+  putFile(file)
+    .then((res) => {
+      fileSaveData.value = res
+
+      /** 打开文件保存弹窗 */
+      showFileSaveDialog.value = true
+    })
+    .catch((error) => {
+      toast.add({
+        severity: 'error',
+        summary: '上传失败',
+        detail: `${error.message}`,
+        life: 2000,
+      })
+    })
 }
 
 const uploadItems = [
@@ -197,14 +267,18 @@ const uploadItems = [
 
 const tableData = ref<FileItem[]>([])
 
+const getTableData = async () => {
+  if (!currFolderId.value) tableData.value = []
+  else {
+    const res = await getFolder(currFolderId.value)
+    tableData.value = res.files
+  }
+}
+
 watch(
   currFolderId,
   async (v) => {
-    if (!v) tableData.value = []
-    else {
-      const res = await getFolder(currFolderId.value)
-      tableData.value = res.files
-    }
+    getTableData()
   },
   { immediate: true },
 )
@@ -234,12 +308,15 @@ const getRowClass = () => {
 const openFolder = (fileId: string) => {
   const targetFileId = fileId
   if (!targetFileId) return
+  /** 如果是搜索模式，则关闭搜索 */
+  if (isSearchMode.value) {
+    clickCloseSearch()
+  }
   makeSelectFolder(targetFileId)
   let fid = targetFileId
   while (true) {
     /** 依次展开 */
     const node = getNodeByKey(fid)
-    console.log('ddd', node)
     if (!node) break
     const fileItem = node.data as FileItem
     if (!fileItem.folderId) break
@@ -255,11 +332,6 @@ const handleContextClick = (ev: MenuItemCommandEvent) => {
     downloadUrl(contextSelectRow.value!.url, contextSelectRow.value!.name)
   }
 }
-
-// const contextItems = ref<MenuItem[]>([
-//   { label: '下载', icon: 'pi pi-copy', command: handleContextClick },
-//   { label: 'Rename', icon: 'pi pi-file-edit' },
-// ])
 
 const contextItems = computed<MenuItem[]>(() => {
   if (contextSelectRow.value?.fileType === 'DOCUMENT') {
@@ -322,6 +394,8 @@ const handleClickBreadCrum = (ev: MenuItemCommandEvent) => {
   openFolder(key!)
 }
 
+const filePathString = ref('')
+
 watch(currFolderId, () => {
   if (!currFolderId.value) return
   /** 获取文件路径name */
@@ -334,6 +408,7 @@ watch(currFolderId, () => {
     icon: idx === 0 ? 'pi pi-home' : '',
     command: handleClickBreadCrum,
   }))
+  filePathString.value = filePath.map((item) => item.name).join('/')
 })
 
 const tableCMenu = ref<InstanceType<typeof ContextMenu> | null>(null)
@@ -342,6 +417,30 @@ const clickTableAction = (ev: MouseEvent) => {
 }
 
 const searchValue = ref('')
+
+const clickCloseSearch = () => {
+  searchValue.value = ''
+}
+
+/** 上传文件后，更新状态 */
+const onCreateFile = async () => {
+  /** 刷新当前节点的信息 */
+  const res = await getFolder(currFolderId.value)
+  selectedNode.value!.children = res.files
+    .filter((item) => item.fileType === 'FOLDER')
+    .map((it) => {
+      return {
+        key: it.fileId,
+        label: it.name,
+        icon: 'pi pi-folder',
+        data: it,
+        /** 文件夹没有子文件 */
+        leaf: it.fileSize === 0,
+        loading: false,
+      }
+    })
+  getTableData()
+}
 
 const onCreateFolder = async () => {
   /** 刷新当前节点的信息 */
@@ -359,6 +458,7 @@ const onCreateFolder = async () => {
         loading: false,
       }
     })
+  getTableData()
 }
 
 const isSearchMode = computed(() => {
@@ -366,31 +466,110 @@ const isSearchMode = computed(() => {
 })
 
 /** 选择的标签 */
-const selectedTags = ref([])
-
+const selectedTags = ref<Tag[]>([])
+const dateRange = ref<[Date | null, Date | null]>([null, null])
 const tagOptions = ref<Tag[]>([])
 
-onMounted(async () => {
-  tagOptions.value = await getAllTags()
-  /** test */
-  tagOptions.value = [
-    {
-      id: 1,
-      name: 'tag1',
-      createTime: '333',
-    },
-    {
-      id: 2,
-      name: 'tag2',
-      createTime: '333',
-    },
-    {
-      id: 3,
-      name: 'tag3',
-      createTime: '333',
-    },
-  ]
+const orderOptions = ref([
+  { name: '时间', value: 'TIME' },
+  { name: '相关度', value: 'RELEVANCE' },
+])
+const selectOrder = ref({ name: '时间', value: 'TIME' })
+const tagConditionOptions = ref([
+  { name: 'AND', value: 'AND' },
+  { name: 'OR', value: 'OR' },
+])
+const selectCondition = ref({ name: 'AND', value: 'AND' })
+const clearTagSelect = () => {
+  selectedTags.value = []
+}
+
+const clearDateRange = () => {
+  dateRange.value = [null, null]
+}
+
+const listenTagInputKeyUp = (ev: KeyboardEvent) => {
+  if (ev.key !== 'Enter') return
+  const target = ev.target as HTMLElement | null
+  if (!(target instanceof HTMLElement)) return
+  if (!target.classList.contains('p-multiselect-filter')) return
+  onTagFilterEnter()
+}
+
+/** 搜索结果数据 */
+const searchResData = ref<ISearchResItem[]>([])
+
+onMounted(() => {
+  window.addEventListener('keyup', listenTagInputKeyUp)
 })
+onUnmounted(() => {
+  window.removeEventListener('keyup', listenTagInputKeyUp)
+})
+
+const currTagFilterValue = ref('')
+
+let searchTid = 0 as any
+const onTagInput = (e: MultiSelectFilterEvent) => {
+  currTagFilterValue.value = e.value
+  clearTimeout(searchTid)
+  /** 搜索标签结果 */
+  searchTid = setTimeout(() => {
+    searchTags(currTagFilterValue.value).then((res) => {
+      tagOptions.value = res
+    })
+  }, 100)
+}
+
+const onTagFilterEnter = async () => {
+  /** 没有输入值 */
+  if (!currTagFilterValue.value) return
+  /** 当前已经存在标签选项 */
+  if (tagOptions.value.length) return
+
+  await postAddTag({ id: 0, name: currTagFilterValue.value, createTime: Date.now() })
+  toast.add({
+    severity: 'secondary',
+    summary: '创建成功',
+    detail: `标签[${currTagFilterValue.value}]`,
+    life: 1200,
+  })
+  searchTags(currTagFilterValue.value).then((res) => {
+    tagOptions.value = res
+  })
+}
+
+const searchParams = computed<ISearchFileParams | null>(() => {
+  if (!isSearchMode.value) return null
+  const res: ISearchFileParams = {
+    folderId: currFolderId.value!,
+    condition: selectCondition.value.value,
+    startTime: dateRange.value[0] ? dateRange.value[0].getTime() : null,
+    endTime: dateRange.value[1] ? dateRange.value[1].getTime() : null,
+    keyword: searchValue.value,
+    sortBy: selectOrder.value.value,
+    tags: selectedTags.value,
+  }
+  return res
+})
+
+let sid = 0 as any
+
+const startSearchFile = async () => {
+  if (!searchParams.value) return
+  // test
+  const res = await searchFile({ ...searchParams.value })
+  searchResData.value = res
+}
+
+const onSearch = async () => {
+  if (!searchParams.value) return
+  clearTimeout(sid)
+  sid = setTimeout(() => {
+    startSearchFile()
+  }, 500)
+}
+
+watch(searchParams, onSearch, { deep: true })
 </script>
 
 <template>
@@ -398,7 +577,7 @@ onMounted(async () => {
     <div class="left">
       <div class="title">
         <IconVue />
-        <span style="margin-left: 10px">primeVue</span>
+        <span style="margin-left: 10px">中远海运</span>
       </div>
       <div class="tree">
         <Tree
@@ -415,17 +594,22 @@ onMounted(async () => {
       </div>
     </div>
     <div class="right">
-      <div class="header">
-        <IconField>
+      <div class="header" style="display: flex; min-width: 300px">
+        <IconField style="width: 70%">
           <InputIcon class="pi pi-search" />
-          <InputText
-            style="width: 70%"
-            v-model="searchValue"
-            placeholder="在此文件夹下搜索，输入关键字，按回车"
-          />
+          <InputText style="width: 100%" v-model="searchValue" placeholder="搜索" />
         </IconField>
+        <Button
+          style="margin-left: 10px"
+          size="small"
+          icon="pi pi-times"
+          label="关闭搜索"
+          severity="info"
+          @click="clickCloseSearch"
+          v-if="isSearchMode"
+        />
       </div>
-      <div class="list-mode" v-show="!isSearchMode">
+      <div class="list-mode" v-if="!isSearchMode">
         <div class="nav">
           <Breadcrumb :model="breadCrumItems" />
         </div>
@@ -488,27 +672,150 @@ onMounted(async () => {
               </template></Column
             >
           </DataTable>
-          <ContextMenu ref="tableCMenu" :model="contextItems" />
         </div>
       </div>
 
-      <div class="search-mode" v-show="isSearchMode">
+      <div class="search-mode" v-if="isSearchMode">
         <div class="filter-options" style="margin-top: 20px; padding-left: 30px">
           <div class="flex items-center gap-4 mb-4">
-            <label class="font-semibold">选择标签</label>
+            <label>选择标签</label>
             <MultiSelect
               v-model="selectedTags"
               :options="tagOptions"
               optionLabel="name"
               filter
+              @filter="onTagInput"
               placeholder="选择标签"
               :maxSelectedLabels="3"
               class="w-full md:w-80"
+              emptyFilterMessage="标签不存在，按回车添加"
+              empty-message="请输入标签名搜索"
+            />
+            <Button
+              @click="clearTagSelect"
+              v-show="selectedTags.length"
+              label="清除"
+              severity="secondary"
+              variant="text"
+            />
+          </div>
+          <div class="flex items-center gap-4 mb-4">
+            <label>标签条件</label>
+            <SelectButton
+              option-label="name"
+              v-model="selectCondition"
+              :options="tagConditionOptions"
+            />
+          </div>
+          <div class="flex items-center gap-4 mb-4">
+            <label>时间范围</label>
+            <DatePicker
+              showTime
+              hourFormat="24"
+              style="width: 12rem"
+              v-model="dateRange[0]"
+              :manualInput="false"
+              date-format="yy/mm/dd"
+              show-button-bar
+              fluid
+            />-<DatePicker
+              showTime
+              hourFormat="24"
+              style="width: 12rem"
+              v-model="dateRange[1]"
+              :manualInput="false"
+              date-format="yy/mm/dd"
+              show-button-bar
+              fluid
+            />
+            <Button
+              label="清除"
+              v-show="dateRange[0] || dateRange[1]"
+              severity="secondary"
+              variant="text"
+              @click="clearDateRange"
             />
           </div>
         </div>
+        <div class="search-res">
+          <DataTable
+            :value="searchResData"
+            @row-contextmenu="onRowContext"
+            @row-click="onRowClick"
+            :row-class="getRowClass"
+          >
+            <template #header>
+              <div class="flex flex-wrap items-center justify-start gap-2">
+                <span class="text-2xl font-bold">搜索结果</span>
+                <SelectButton
+                  size="small"
+                  option-label="name"
+                  v-model="selectOrder"
+                  :options="orderOptions"
+                />
+              </div>
+            </template>
+            <Column field="name" header="文件名">
+              <template #body="slotProps: { data: FileItem }">
+                <div class="file-name">
+                  <Icon
+                    v-show="slotProps.data.fileType === 'FOLDER'"
+                    icon="material-symbols:folder"
+                    color="#5dade2"
+                    width="28"
+                  ></Icon>
+                  <Icon
+                    icon="bx:file"
+                    color="#cccccc"
+                    width="28"
+                    v-show="slotProps.data.fileType === 'DOCUMENT'"
+                  ></Icon>
+                  <span>{{ slotProps.data.name }}</span>
+                </div>
+              </template>
+            </Column>
+
+            <template #footer> 共有 {{ searchResData.length }} 条搜索结果 </template>
+          </DataTable>
+        </div>
       </div>
+
+      <ContextMenu ref="tableCMenu" :model="contextItems" />
     </div>
+
+    <Dialog
+      v-model:visible="showFileSaveDialog"
+      modal
+      header="文件保存"
+      :style="{ width: '32rem' }"
+    >
+      <div class="flex items-center gap-4 mb-4" style="margin-top: 10px">
+        <label class="w-24">文件类型</label>
+        <Message size="small" severity="success" variant="outlined">{{
+          fileSaveData!.documentType
+        }}</Message>
+      </div>
+      <div class="flex gap-4 mb-4 items-center">
+        <label class="w-24">文件路径</label>
+        <Message size="small" severity="secondary" variant="outlined"
+          >{{ filePathString }}/</Message
+        >
+      </div>
+      <div class="flex gap-4 mb-4 items-center">
+        <label for="name" class="w-24">文件名</label>
+        <InputText
+          placeholder="请输入文件名"
+          v-model="fileSaveData!.name"
+          id="name"
+          class="flex-auto"
+          autocomplete="off"
+        />
+      </div>
+      <div class="flex justify-end gap-2">
+        <Button type="button" label="取消" severity="secondary" @click="clickCancelSave"></Button>
+        <Button type="button" label="确认" @click="clickConfirmSave"></Button>
+      </div>
+    </Dialog>
   </div>
 </template>
 
