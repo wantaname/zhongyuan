@@ -8,7 +8,7 @@ import type {
   TieredMenu,
 } from 'primevue'
 import Tree from 'primevue/tree'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
+import {computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect} from 'vue'
 import {
   createFolder,
   downloadFile,
@@ -24,12 +24,12 @@ import {
   type ISearchResItem,
   type Tag,
 } from '@/service/home'
-import type { TreeNode } from 'primevue/treenode'
-import type { MenuItem, MenuItemCommandEvent } from 'primevue/menuitem'
+import type {TreeNode} from 'primevue/treenode'
+import type {MenuItem, MenuItemCommandEvent} from 'primevue/menuitem'
 import createFolderBtn from './components/create-folder-btn.vue'
-import { downloadUrl, formatTimestamp, selectLocalFile } from './utils'
-import { Icon } from '@iconify/vue'
-import { useToast } from 'primevue/usetoast'
+import {downloadUrl, formatTimestamp, selectLocalFile} from './utils'
+import {Icon} from '@iconify/vue'
+import {useToast} from 'primevue/usetoast'
 
 const toast = useToast()
 type FileId = string
@@ -47,7 +47,7 @@ watchEffect(() => {
   if (!currFolderId.value) {
     selectedKey.value = {}
   } else if (!selectedKey.value[currFolderId.value]) {
-    selectedKey.value = { [currFolderId.value]: true }
+    selectedKey.value = {[currFolderId.value]: true}
   }
 })
 
@@ -107,7 +107,8 @@ const makeSelectFolder = (fileId: string) => {
 const onNodeSelect = (node: TreeNode) => {
   currFolderId.value = node.key
 }
-const onNodeUnSelect = (node: TreeNode) => {}
+const onNodeUnSelect = (node: TreeNode) => {
+}
 
 const onNodeCollapse = (node: TreeNode) => {
   currExpandFolderIds.value = currExpandFolderIds.value.filter((it) => it !== node.key)
@@ -118,7 +119,7 @@ const folderNodes = ref<TreeNode[]>([])
 
 const getRootData = async () => {
   const res = await getFolder()
-  folderNodes.value = [res].map(({ folder, files }) => {
+  folderNodes.value = [res].map(({folder, files}) => {
     return {
       key: folder.fileId,
       label: folder.name,
@@ -143,7 +144,7 @@ const getRootData = async () => {
   })
   currFolderId.value = folderNodes.value[0].key
   // currExpandFolderIds.value = [folderNodes.value[0].key]
-  selectedKey.value = { [folderNodes.value[0].key]: true }
+  selectedKey.value = {[folderNodes.value[0].key]: true}
   // expandedKeys.value = {
   //   [folderNodes.value[0].key]: true,
   // }
@@ -238,7 +239,7 @@ const mockUploadFile = async () => {
 const startUploadFile = async () => {
   // mockUploadFile()
   // return
-  const file = await selectLocalFile({ accept: '*' })
+  const file = await selectLocalFile({ accept: '.pdf' })
   putFile(file)
     .then((res) => {
       fileSaveData.value = res
@@ -280,7 +281,7 @@ watch(
   async (v) => {
     getTableData()
   },
-  { immediate: true },
+  {immediate: true},
 )
 
 const contextSelectRow = ref<FileItem | null>(null)
@@ -329,7 +330,8 @@ const handleContextClick = (ev: MenuItemCommandEvent) => {
   if (ev.item.label === '打开') {
     openFolder(contextSelectRow.value!.fileId)
   } else if (ev.item.label === '下载') {
-    downloadUrl(contextSelectRow.value!.url, contextSelectRow.value!.name)
+    var url = __PROXY_TARGET__ + 'api/v1/file/download?fileId=' + contextSelectRow.value!.fileId
+    downloadUrl(url, contextSelectRow.value!.name)
   }
 }
 
@@ -358,6 +360,7 @@ function findFilePath(targetKey: string): TreeNode[] | null {
   // 路径存储
   const path: TreeNode[] = []
   const tree = folderNodes.value[0]
+
   // 内部递归函数
   function dfs(node: TreeNode): boolean {
     // 将当前节点加入路径
@@ -471,15 +474,15 @@ const dateRange = ref<[Date | null, Date | null]>([null, null])
 const tagOptions = ref<Tag[]>([])
 
 const orderOptions = ref([
-  { name: '时间', value: 'TIME' },
-  { name: '相关度', value: 'RELEVANCE' },
+  {name: '时间', value: 'TIME'},
+  {name: '相关度', value: 'RELEVANCE'},
 ])
-const selectOrder = ref({ name: '时间', value: 'TIME' })
+const selectOrder = ref({name: '时间', value: 'TIME'})
 const tagConditionOptions = ref([
-  { name: 'AND', value: 'AND' },
-  { name: 'OR', value: 'OR' },
+  {name: 'AND', value: 'AND'},
+  {name: 'OR', value: 'OR'},
 ])
-const selectCondition = ref({ name: 'AND', value: 'AND' })
+const selectCondition = ref({name: 'AND', value: 'AND'})
 const clearTagSelect = () => {
   selectedTags.value = []
 }
@@ -526,7 +529,7 @@ const onTagFilterEnter = async () => {
   /** 当前已经存在标签选项 */
   if (tagOptions.value.length) return
 
-  await postAddTag({ id: 0, name: currTagFilterValue.value, createTime: Date.now() })
+  await postAddTag({id: 0, name: currTagFilterValue.value, createTime: Date.now()})
   toast.add({
     severity: 'secondary',
     summary: '创建成功',
@@ -557,7 +560,7 @@ let sid = 0 as any
 const startSearchFile = async () => {
   if (!searchParams.value) return
   // test
-  const res = await searchFile({ ...searchParams.value })
+  const res = await searchFile({...searchParams.value})
   searchResData.value = res
 }
 
@@ -569,14 +572,14 @@ const onSearch = async () => {
   }, 500)
 }
 
-watch(searchParams, onSearch, { deep: true })
+watch(searchParams, onSearch, {deep: true})
 </script>
 
 <template>
   <div class="home-view">
     <div class="left">
       <div class="title">
-        <IconVue />
+        <IconVue/>
         <span style="margin-left: 10px">中远海运</span>
       </div>
       <div class="tree">
@@ -596,8 +599,8 @@ watch(searchParams, onSearch, { deep: true })
     <div class="right">
       <div class="header" style="display: flex; min-width: 300px">
         <IconField style="width: 70%">
-          <InputIcon class="pi pi-search" />
-          <InputText style="width: 100%" v-model="searchValue" placeholder="搜索" />
+          <InputIcon class="pi pi-search"/>
+          <InputText style="width: 100%" v-model="searchValue" placeholder="搜索"/>
         </IconField>
         <Button
           style="margin-left: 10px"
@@ -611,7 +614,7 @@ watch(searchParams, onSearch, { deep: true })
       </div>
       <div class="list-mode" v-if="!isSearchMode">
         <div class="nav">
-          <Breadcrumb :model="breadCrumItems" />
+          <Breadcrumb :model="breadCrumItems"/>
         </div>
         <div class="action">
           <div class="upload">
@@ -624,7 +627,7 @@ watch(searchParams, onSearch, { deep: true })
               raised
               aria-controls="overlay_upload_menu"
             />
-            <TieredMenu ref="uploadMenu" id="overlay_upload_menu" :model="uploadItems" popup />
+            <TieredMenu ref="uploadMenu" id="overlay_upload_menu" :model="uploadItems" popup/>
           </div>
           <div class="new" style="margin-left: 20px">
             <create-folder-btn
@@ -669,7 +672,8 @@ watch(searchParams, onSearch, { deep: true })
             <Column field="updateTime" header="修改时间">
               <template #body="slotProps">
                 {{ formatTimestamp(slotProps.data.updateTime) }}
-              </template></Column
+              </template>
+            </Column
             >
           </DataTable>
         </div>
@@ -718,7 +722,9 @@ watch(searchParams, onSearch, { deep: true })
               date-format="yy/mm/dd"
               show-button-bar
               fluid
-            />-<DatePicker
+            />
+            -
+            <DatePicker
               showTime
               hourFormat="24"
               style="width: 12rem"
@@ -775,30 +781,32 @@ watch(searchParams, onSearch, { deep: true })
               </template>
             </Column>
 
-            <template #footer> 共有 {{ searchResData.length }} 条搜索结果 </template>
+            <template #footer> 共有 {{ searchResData.length }} 条搜索结果</template>
           </DataTable>
         </div>
       </div>
 
-      <ContextMenu ref="tableCMenu" :model="contextItems" />
+      <ContextMenu ref="tableCMenu" :model="contextItems"/>
     </div>
 
     <Dialog
       v-model:visible="showFileSaveDialog"
       modal
       header="文件保存"
-      :style="{ width: '32rem' }"
+      :style="{ width: '35rem' }"
     >
       <div class="flex items-center gap-4 mb-4" style="margin-top: 10px">
         <label class="w-24">文件类型</label>
         <Message size="small" severity="success" variant="outlined">{{
-          fileSaveData!.documentType
-        }}</Message>
+            fileSaveData!.documentType
+          }}
+        </Message>
       </div>
       <div class="flex gap-4 mb-4 items-center">
         <label class="w-24">文件路径</label>
         <Message size="small" severity="secondary" variant="outlined"
-          >{{ filePathString }}/</Message
+        >{{ filePathString }}/
+        </Message
         >
       </div>
       <div class="flex gap-4 mb-4 items-center">
@@ -825,29 +833,36 @@ watch(searchParams, onSearch, { deep: true })
   height: 100vh;
   margin-top: 0;
   display: flex;
+
   .left {
     width: 380px;
     height: 100%;
     background-color: rgb(245, 245, 245);
   }
 }
+
 .right {
   width: calc(100vw - 380px);
   padding: 20px 20px;
+
   .header {
     padding-left: 20px;
   }
+
   .nav {
     margin-top: 20px;
   }
+
   .action {
     display: flex;
     justify-content: flex-end;
   }
 }
+
 .tree {
   --p-tree-background: rgb(245, 245, 245);
 }
+
 .title {
   padding-top: 20px;
   padding-left: 30px;
