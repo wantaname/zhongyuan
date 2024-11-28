@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import { createFolder } from '@/service/home'
-import { useToast } from 'primevue/usetoast'
-import { ref } from 'vue'
+import {createFolder} from '@/service/home'
+import {useToast} from 'primevue/usetoast'
+import {ref} from 'vue'
 
 interface Props {
   folderId: string
@@ -36,7 +36,7 @@ const clickConfirm = async () => {
     description: form.value.desc,
   })
   emit('created', form.value)
-  toast.add({ severity: 'success', summary: '创建成功', detail: `${form.value.name}`, life: 2000 })
+  toast.add({severity: 'success', summary: '创建成功', detail: `${form.value.name}`, life: 2000})
   clickCancel()
 }
 </script>
@@ -51,24 +51,25 @@ const clickConfirm = async () => {
     raised
     aria-controls="overlay_new_menu"
   />
-  <Dialog v-model:visible="visible" modal header="新建文件夹" :style="{ width: '25rem' }">
-    <div class="flex items-center gap-4 mb-4">
+  <Dialog v-model:visible="visible" modal header="新建文件夹" :style="{ width: '35rem' }">
+    <div class="flex items-center gap-4 mb-5">
       <label for="name" class="font-semibold w-24">文件夹名称</label>
       <InputText
-        placeholder="必填"
+        placeholder="请输入文件夹名..."
         v-model="form.name"
         id="name"
         class="flex-auto"
         autocomplete="off"
       />
     </div>
-    <div class="flex gap-4 mb-4 items-center">
+    <div style="height: 10px"></div>
+    <div class="flex gap-4 mb-5 items-center  ">
       <label for="email" class="font-semibold w-24">文件夹描述</label>
-      <Textarea Filled placeholder="选填" v-model="form.desc" autoResize rows="3" cols="30" />
+      <Textarea Filled placeholder="请输入文件描述..." v-model="form.desc" autoResize rows="3" cols="48"/>
     </div>
     <div class="flex justify-end gap-2">
-      <Button type="button" label="取消" severity="secondary" @click="clickCancel"></Button>
-      <Button type="button" label="确认" @click="clickConfirm"></Button>
+      <Button type="button" label="取消" severity="secondary" @click="clickCancel" :style="{ width: '5rem'}"></Button>
+      <Button type="button" label="确认" @click="clickConfirm" :style="{ width: '5rem' }"></Button>
     </div>
   </Dialog>
 </template>
