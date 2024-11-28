@@ -239,7 +239,7 @@ const mockUploadFile = async () => {
 const startUploadFile = async () => {
   // mockUploadFile()
   // return
-  const file = await selectLocalFile({ accept: '.pdf' })
+  const file = await selectLocalFile({ accept: '.doc, .docx, .xls, .xlsx, .ppt, .pptx, .txt, .md, .pdf' })
   putFile(file)
     .then((res) => {
       fileSaveData.value = res
