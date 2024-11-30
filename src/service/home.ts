@@ -121,10 +121,12 @@ export interface IPutFileRes {
   documentType: string
   size: number
 }
+
 /** 上传文件 */
-export function putFile(file: File): Promise<IPutFileRes> {
+export function putFile(file: File, folderId: string): Promise<IPutFileRes> {
   const formData = new FormData()
   formData.append('file', file)
+  formData.append('folderId', folderId)
   return request({
     method: 'put',
     url: '/api/v1/file/upload',
@@ -139,7 +141,7 @@ export function searchTags(name: string): Promise<Tag[]> {
   return request({
     method: 'get',
     url: '/api/v1/tag/search',
-    params: { name },
+    params: {name},
   })
 }
 
@@ -188,7 +190,8 @@ export interface ISearchFileParams {
   documentType?: string[]
 }
 
-export interface ISearchResItem {}
+export interface ISearchResItem {
+}
 
 /** 搜索文件 */
 export function searchFile(params: ISearchFileParams): Promise<ISearchResItem[]> {

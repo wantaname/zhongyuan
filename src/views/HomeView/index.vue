@@ -236,14 +236,14 @@ const mockUploadFile = async () => {
   }
   showFileSaveDialog.value = true
 }
-const startUploadFile = async () => {
+const startUploadFile = async (currFolderId: string) => {
   // mockUploadFile()
   // return
-  const file = await selectLocalFile({ accept: '.doc, .docx, .xls, .xlsx, .ppt, .pptx, .txt, .md, .pdf' })
-  putFile(file)
+  const file = await selectLocalFile({accept: '.doc, .docx, .xls, .xlsx, .ppt, .pptx, .txt, .md, .pdf'})
+  putFile(file, currFolderId)
+    // 右下角的弹窗？不知道写
     .then((res) => {
       fileSaveData.value = res
-
       /** 打开文件保存弹窗 */
       showFileSaveDialog.value = true
     })
@@ -261,7 +261,10 @@ const uploadItems = [
   {
     label: '上传文件',
     command: () => {
-      startUploadFile()
+      if (!currFolderId.value) {
+        return
+      }
+      startUploadFile(currFolderId.value);
     },
   },
 ]
