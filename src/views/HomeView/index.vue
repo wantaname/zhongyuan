@@ -243,9 +243,7 @@ const startUploadFile = async (currFolderId: string) => {
   putFile(file, currFolderId)
     // 右下角的弹窗？不知道写
     .then((res) => {
-      fileSaveData.value = res
       /** 打开文件保存弹窗 */
-      showFileSaveDialog.value = true
     })
     .catch((error) => {
       toast.add({
