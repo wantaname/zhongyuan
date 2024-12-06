@@ -282,15 +282,16 @@ const mockUploadFile = async () => {
   showFileSaveDialog.value = true
 }
 const startUploadFile = async () => {
+  if (!currFolderId.value) return
   // mockUploadFile()
   // return
-  const file = await selectLocalFile({ accept: '*' })
-  putFile(file)
+  const file = await selectLocalFile({
+    accept: '.doc, .docx, .xls, .xlsx, .ppt, .pptx, .txt, .md, .pdf',
+  })
+  putFile(file, currFolderId.value)
+    // 右下角的弹窗？不知道写
     .then((res) => {
-      fileSaveData.value = res
-
       /** 打开文件保存弹窗 */
-      showFileSaveDialog.value = true
     })
     .catch((error) => {
       toast.add({
@@ -301,15 +302,6 @@ const startUploadFile = async () => {
       })
     })
 }
-
-const uploadItems = [
-  {
-    label: '上传文件',
-    command: () => {
-      startUploadFile()
-    },
-  },
-]
 
 const tableData = ref<FileItem[]>([])
 
@@ -384,7 +376,8 @@ const handleContextClick = (ev: MenuItemCommandEvent) => {
   if (ev.item.label === '打开') {
     openFolder(contextSelectRow.value!.fileId)
   } else if (ev.item.label === '下载') {
-    downloadUrl(contextSelectRow.value!.url, contextSelectRow.value!.name)
+    var url = '/api/v1/file/download?fileId=' + contextSelectRow.value!.fileId
+    downloadUrl(url, contextSelectRow.value!.name)
   } else if (ev.item.label === '删除') {
     deleteFile({ fileId: contextSelectRow.value!.fileId }).then(() => {
       toast.add({
@@ -456,6 +449,7 @@ function findFilePath(targetKey: string): TreeNode[] | null {
   // 路径存储
   const path: TreeNode[] = []
   const tree = folderNodes.value[0]
+
   // 内部递归函数
   function dfs(node: TreeNode): boolean {
     // 将当前节点加入路径
@@ -765,8 +759,8 @@ watch(searchParams, onSearch, { deep: true })
             <Column field="updateTime" header="修改时间" style="width: 200px">
               <template #body="slotProps">
                 {{ formatTimestamp(slotProps.data.updateTime) }}
-              </template></Column
-            >
+              </template>
+            </Column>
             <Column header="" style="width: 100px">
               <template #body="slotProps">
                 <Button
@@ -818,7 +812,9 @@ watch(searchParams, onSearch, { deep: true })
               date-format="yy/mm/dd"
               show-button-bar
               fluid
-            />-<DatePicker
+            />
+            -
+            <DatePicker
               showTime
               hourFormat="24"
               style="width: 12rem"
@@ -892,7 +888,7 @@ watch(searchParams, onSearch, { deep: true })
                 /> </template
             ></Column>
 
-            <template #footer> 共有 {{ searchResData.length }} 条搜索结果 </template>
+            <template #footer> 共有 {{ searchResData.length }} 条搜索结果</template>
           </DataTable>
         </div>
       </div>
@@ -904,19 +900,19 @@ watch(searchParams, onSearch, { deep: true })
       v-model:visible="showFileSaveDialog"
       modal
       header="文件保存"
-      :style="{ width: '32rem' }"
+      :style="{ width: '35rem' }"
     >
       <div class="flex items-center gap-4 mb-4" style="margin-top: 10px">
         <label class="w-24">文件类型</label>
-        <Message size="small" severity="success" variant="outlined">{{
-          fileSaveData!.documentType
-        }}</Message>
+        <Message size="small" severity="success" variant="outlined"
+          >{{ fileSaveData!.documentType }}
+        </Message>
       </div>
       <div class="flex gap-4 mb-4 items-center">
         <label class="w-24">文件路径</label>
         <Message size="small" severity="secondary" variant="outlined"
-          >{{ filePathString }}/</Message
-        >
+          >{{ filePathString }}/
+        </Message>
       </div>
       <div class="flex gap-4 mb-4 items-center">
         <label for="name" class="w-24">文件名</label>
@@ -980,29 +976,36 @@ watch(searchParams, onSearch, { deep: true })
   height: 100vh;
   margin-top: 0;
   display: flex;
+
   .left {
     width: 380px;
     height: 100%;
     background-color: rgb(245, 245, 245);
   }
 }
+
 .right {
   width: calc(100vw - 380px);
   padding: 20px 20px;
+
   .header {
     padding-left: 20px;
   }
+
   .nav {
     margin-top: 20px;
   }
+
   .action {
     display: flex;
     justify-content: flex-end;
   }
 }
+
 .tree {
   --p-tree-background: rgb(245, 245, 245);
 }
+
 .title {
   padding-top: 20px;
   padding-left: 30px;

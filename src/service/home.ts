@@ -131,10 +131,12 @@ export interface IPutFileRes {
   documentType: string
   size: number
 }
+
 /** 上传文件 */
-export function putFile(file: File): Promise<IPutFileRes> {
+export function putFile(file: File, folderId: string): Promise<IPutFileRes> {
   const formData = new FormData()
   formData.append('file', file)
+  formData.append('folderId', folderId)
   return request({
     method: 'put',
     url: '/api/v1/file/upload',
