@@ -1,11 +1,5 @@
 import request from '@/utils/request'
 
-export interface Tag {
-  id: number
-  name: string
-  createTime: number
-}
-
 /** 文件/文件夹信息 */
 export interface FileItem {
   fileId: string
@@ -14,7 +8,7 @@ export interface FileItem {
   /** 文件类型 */
   fileType: 'DOCUMENT' | 'FOLDER'
   /** 文件夹为null */
-  tags: Tag[] | null
+  tags: Record<string, TagValueItem>
   /** 文件名 */
   name: string
   /** 文件大小(B)|文件夹子文件个数 */
@@ -58,13 +52,13 @@ interface FolderInfo {
 
 /** 获取文件夹信息 */
 export function getFolder(folderId?: string): Promise<{ folder: FileItem; files: FileItem[] }> {
-  return request<any, FolderInfo>({
+  return request<any, any>({
     method: 'get',
     url: 'api/v1/file/folder/detail',
     params: {
       folderId,
     },
-  }).then((data: FolderInfo) => {
+  }).then((data: any) => {
     return {
       folder: {
         fileId: data.fileId,
@@ -77,12 +71,12 @@ export function getFolder(folderId?: string): Promise<{ folder: FileItem; files:
         documentType: null,
         updateTime: data.updateTime,
         url: '',
-        tags: [],
+        tags: {},
       },
-      files: data.files.map((item) => ({
+      files: data.files.map((item: any) => ({
         fileId: item.fileId,
         folderId: item.folderId,
-        description: item.description,
+        description: item.description || '',
         fileSize: item.fileSize,
         fileType: item.fileType,
         name: item.name,
@@ -90,7 +84,7 @@ export function getFolder(folderId?: string): Promise<{ folder: FileItem; files:
         documentType: item.documentType,
         updateTime: item.updateTime,
         url: item.url || '',
-        tags: item.tags || [],
+        tags: item.tags || {},
       })),
     }
   })
@@ -147,7 +141,7 @@ export function putFile(file: File, folderId: string): Promise<IPutFileRes> {
   })
 }
 
-export function searchTags(name: string): Promise<Tag[]> {
+export function searchTags(name: string): Promise<TagValueItem[]> {
   return request({
     method: 'get',
     url: '/api/v1/tag/search',
@@ -179,13 +173,41 @@ export function postSaveFile(params: IPostSaveFileParams) {
   })
 }
 
+export interface TagValueItem {
+  label: string
+  dataType: 'STRING' | 'NUMBER' | 'DATE'
+  isList: boolean
+  tagId: string
+  isCanSearch: boolean
+  index: number
+  isActive: boolean
+  value: string
+}
+
+export interface TagItem {
+  label: string
+  dataType: 'STRING' | 'NUMBER' | 'DATE'
+  isList: boolean
+  tagId: string
+  isCanSearch: boolean
+  index: number
+  isActive: boolean
+}
+
 /** 创建标签 */
 /** 创建文件夹 */
-export function postAddTag(params: Tag) {
+export function postAddTag(params: TagValueItem) {
   return request({
     method: 'post',
     url: '/api/v1/tag/add',
     data: params,
+  })
+}
+
+export function getAllTag(): Promise<TagItem[]> {
+  return request({
+    method: 'get',
+    url: '/api/v1/tag/config/all',
   })
 }
 
@@ -194,9 +216,9 @@ export interface ISearchFileParams {
   startTime: number | null
   endTime: number | null
   keyword: string
-  tags: Tag[]
-  condition: string
   sortBy: string
+  // todo
+  tagFilters: { tagId: string }
   documentType?: string[]
 }
 
@@ -210,7 +232,7 @@ export interface ISearchResItem {
   fileType: null
   folderId: string
   name: string
-  tags: Tag[]
+  tags: Record<string, TagValueItem>
   updateTime: number
   url: string
 }
@@ -252,6 +274,21 @@ export function renameFile(params: { fileId: string; name: string }): Promise<an
     method: 'post',
     url: '/api/v1/file/update',
     params: {
+      ...params,
+    },
+  })
+}
+
+/** 更新文件信息 */
+export function updateFile(params: {
+  fileId: string
+  name: string
+  tags: Record<string, TagValueItem>
+}): Promise<any> {
+  return request({
+    method: 'post',
+    url: '/api/v1/file/update',
+    data: {
       ...params,
     },
   })

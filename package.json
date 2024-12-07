@@ -19,6 +19,7 @@
     "@primevue/themes": "^4.2.3",
     "autoprefixer": "^10.4.20",
     "axios": "^1.7.8",
+    "lodash": "^4.17.21",
     "pinia": "^2.2.6",
     "primeicons": "^7.0.0",
     "primevue": "^4.2.3",
@@ -30,6 +31,7 @@
   "devDependencies": {
     "@primevue/auto-import-resolver": "^4.2.4",
     "@tsconfig/node22": "^22.0.0",
+    "@types/lodash": "^4.17.13",
     "@types/node": "^22.9.0",
     "@vitejs/plugin-vue": "^5.1.4",
     "@vue/eslint-config-prettier": "^10.1.0",

@@ -13,6 +13,7 @@ import {
   createFolder,
   deleteFile,
   downloadFile,
+  getAllTag,
   getFolder,
   postAddTag,
   postSaveFile,
@@ -20,11 +21,13 @@ import {
   renameFile,
   searchFile,
   searchTags,
+  updateFile,
   type FileItem,
   type IPutFileRes,
   type ISearchFileParams,
   type ISearchResItem,
-  type Tag,
+  type TagItem,
+  type TagValueItem,
 } from '@/service/home'
 import type { TreeNode } from 'primevue/treenode'
 import type { MenuItem, MenuItemCommandEvent } from 'primevue/menuitem'
@@ -32,6 +35,9 @@ import createFolderBtn from './components/create-folder-btn.vue'
 import { downloadUrl, formatTimestamp, selectLocalFile } from './utils'
 import { Icon } from '@iconify/vue'
 import { useToast } from 'primevue/usetoast'
+import { useRouter } from 'vue-router'
+import TagWindow from './components/tags/index.vue'
+import { cloneDeep, filter } from 'lodash'
 
 const toast = useToast()
 type FileId = string
@@ -156,6 +162,12 @@ onMounted(async () => {
   getRootData()
 })
 
+const allTags = ref<TagItem[]>([])
+
+onMounted(async () => {
+  allTags.value = await getAllTag()
+})
+
 /** Tree组件内部会先设置expendKeys的值，再emit */
 const onNodeExpand = async (node: TreeNode) => {
   if (node.children) {
@@ -192,42 +204,50 @@ const clickUpload = (e: MouseEvent) => {
 const showFileSaveDialog = ref(false)
 const fileSaveData = ref<IPutFileRes | null>(null)
 
-const ShowRenameFileDialog = ref(false)
-const fileRenameData = ref<{ fileId: string; oldName: string; newName: string }>({
-  fileId: '',
-  oldName: '',
-  newName: '',
-})
+const ShowEditDialog = ref(false)
+// const fileRenameData = ref<{ fileId: string; oldName: string; newName: string }>({
+//   fileId: '',
+//   oldName: '',
+//   newName: '',
+// })
+
+const editFileData = ref<FileItem | null>(null)
 
 /** 取消保存 */
 const clickCancelSave = async () => {
   showFileSaveDialog.value = false
 }
 
-const clickConfirmRename = async () => {
-  renameFile({
-    fileId: fileRenameData.value.fileId,
-    name: fileRenameData.value.newName,
+/** 确认修改文件信息 */
+const clickConfirmEditFile = async () => {
+  if (!editFileData.value) return
+  const name = editFileData.value.name
+  updateFile({
+    fileId: editFileData.value.fileId,
+    name: editFileData.value.name,
+    tags: editFileData.value.tags,
   })
     .then(() => {
       toast.add({
         severity: 'success',
         summary: '修改成功',
-        detail: `${fileRenameData.value.oldName}->${fileRenameData.value.newName}`,
+        detail: `${name}`,
         life: 2000,
       })
-      ShowRenameFileDialog.value = false
+      ShowEditDialog.value = false
       if (!isSearchMode.value) {
-        const idx = tableData.value.findIndex((item) => item.fileId === fileRenameData.value.fileId)
+        const idx = tableData.value.findIndex((item) => item.fileId === editFileData.value!.fileId)
         if (idx !== -1) {
-          tableData.value[idx].name = fileRenameData.value.newName
+          tableData.value[idx].name = editFileData.value!.name
+          tableData.value[idx].tags = editFileData.value!.tags
         }
       } else {
         const idx = searchResData.value.findIndex(
-          (item) => item.fileId === fileRenameData.value.fileId,
+          (item) => item.fileId === editFileData.value!.fileId,
         )
         if (idx !== -1) {
-          searchResData.value[idx].name = fileRenameData.value.newName
+          searchResData.value[idx].name = editFileData.value!.name
+          searchResData.value[idx].tags = editFileData.value!.tags
         }
       }
     })
@@ -289,9 +309,8 @@ const startUploadFile = async () => {
     accept: '.doc, .docx, .xls, .xlsx, .ppt, .pptx, .txt, .md, .pdf',
   })
   putFile(file, currFolderId.value)
-    // 右下角的弹窗？不知道写
     .then((res) => {
-      /** 打开文件保存弹窗 */
+      onCreateFile()
     })
     .catch((error) => {
       toast.add({
@@ -373,6 +392,7 @@ const openFolder = (fileId: string) => {
 }
 
 const handleContextClick = (ev: MenuItemCommandEvent) => {
+  if (!contextSelectRow.value) return
   if (ev.item.label === '打开') {
     openFolder(contextSelectRow.value!.fileId)
   } else if (ev.item.label === '下载') {
@@ -396,11 +416,9 @@ const handleContextClick = (ev: MenuItemCommandEvent) => {
         searchResData.value.splice(delIdx, 1)
       }
     })
-  } else if (ev.item.label === '重命名') {
-    fileRenameData.value.oldName = contextSelectRow.value!.name
-    fileRenameData.value.newName = ''
-    fileRenameData.value.fileId = contextSelectRow.value!.fileId
-    ShowRenameFileDialog.value = true
+  } else if (ev.item.label === '修改') {
+    editFileData.value = cloneDeep({ ...contextSelectRow.value })
+    ShowEditDialog.value = true
   }
 }
 
@@ -418,7 +436,7 @@ const contextItems = computed<MenuItem[]>(() => {
         command: handleContextClick,
       },
       {
-        label: '重命名',
+        label: '修改',
         icon: 'pi pi-file-edit',
         command: handleContextClick,
       },
@@ -546,89 +564,135 @@ const isSearchMode = computed(() => {
   return !!searchValue.value
 })
 
+const selectedTagItem = ref<TagItem | null>(null)
+const inputTagValue = ref('')
+const inputNumberTagValue = ref([undefined, undefined])
+const inputTagDateRange = ref<[Date | null, Date | null]>([null, null])
+type SearchTagItem = TagValueItem
+const filterItems = ref<SearchTagItem[]>([])
+
+const removeSearchTag = (tag: SearchTagItem) => {
+  const idx = filterItems.value.findIndex((it) => it.tagId === tag.tagId && it.value === tag.value)
+  if (idx !== -1) {
+    filterItems.value.splice(idx, 1)
+  }
+}
+
+function formatDate(date: Date) {
+  const year = date.getFullYear()
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const day = date.getDate().toString().padStart(2, '0')
+  const hours = date.getHours().toString().padStart(2, '0')
+  const minutes = date.getMinutes().toString().padStart(2, '0')
+
+  return `${year}/${month}/${day} ${hours}:${minutes}`
+}
+
+const formatDataType = (s: string | number[] | Date[] | any[]) => {
+  if (!Array.isArray(s)) return s.toString()
+  return s
+    .map((item) => {
+      if (item === null || item === undefined) return ''
+      if (item instanceof Date) {
+        return formatDate(item)
+      }
+      return item.toString()
+    })
+    .join('-')
+}
+
+const clickAddFilterItem = () => {
+  if (!selectedTagItem.value) return
+  const dataType = selectedTagItem.value.dataType
+  if (dataType === 'STRING' && !inputTagValue.value) {
+    toast.add({
+      severity: 'warn',
+      summary: '请输入标签值',
+      life: 1200,
+    })
+    return
+  }
+  if (dataType === 'NUMBER' && inputNumberTagValue.value.find((item) => item === undefined)) {
+    toast.add({
+      severity: 'warn',
+      summary: '请输入标签值',
+      life: 1200,
+    })
+    return
+  }
+  if (dataType === 'DATE' && inputTagDateRange.value.find((item) => !item)) {
+    toast.add({
+      severity: 'warn',
+      summary: '请输入标签值',
+      life: 1200,
+    })
+    return
+  }
+  const origin_value =
+    dataType === 'STRING'
+      ? inputTagValue.value
+      : dataType === 'NUMBER'
+        ? inputNumberTagValue.value
+        : inputTagDateRange.value
+  const item = {
+    ...selectedTagItem.value,
+    value: formatDataType(origin_value),
+    origin_value: origin_value,
+  }
+  if (filterItems.value.find((it) => it.tagId === item.tagId && it.value === item.value)) return
+  filterItems.value.push(item)
+}
+const searchTagOptions = computed(() => {
+  return allTags.value.filter((item) => item.isCanSearch)
+})
+
 /** 选择的标签 */
-const selectedTags = ref<Tag[]>([])
+// const selectedTags = ref<Tag[]>([])
 const dateRange = ref<[Date | null, Date | null]>([null, null])
-const tagOptions = ref<Tag[]>([])
+// const tagOptions = ref<Tag[]>([])
 
 const orderOptions = ref([
   { name: '时间', value: 'TIME' },
   { name: '相关度', value: 'RELEVANCE' },
 ])
 const selectOrder = ref({ name: '时间', value: 'TIME' })
-const tagConditionOptions = ref([
-  { name: 'AND', value: 'AND' },
-  { name: 'OR', value: 'OR' },
-])
-const selectCondition = ref({ name: 'AND', value: 'AND' })
-const clearTagSelect = () => {
-  selectedTags.value = []
-}
 
-const clearDateRange = () => {
-  dateRange.value = [null, null]
-}
-
-const listenTagInputKeyUp = (ev: KeyboardEvent) => {
-  if (ev.key !== 'Enter') return
-  const target = ev.target as HTMLElement | null
-  if (!(target instanceof HTMLElement)) return
-  if (!target.classList.contains('p-multiselect-filter')) return
-  onTagFilterEnter()
-}
+// const listenTagInputKeyUp = (ev: KeyboardEvent) => {
+//   if (ev.key !== 'Enter') return
+//   const target = ev.target as HTMLElement | null
+//   if (!(target instanceof HTMLElement)) return
+//   if (!target.classList.contains('p-multiselect-filter')) return
+// }
 
 /** 搜索结果数据 */
 const searchResData = ref<ISearchResItem[]>([])
 
-onMounted(() => {
-  window.addEventListener('keyup', listenTagInputKeyUp)
-})
-onUnmounted(() => {
-  window.removeEventListener('keyup', listenTagInputKeyUp)
-})
+// onMounted(() => {
+//   window.addEventListener('keyup', listenTagInputKeyUp)
+// })
+// onUnmounted(() => {
+//   window.removeEventListener('keyup', listenTagInputKeyUp)
+// })
 
 const currTagFilterValue = ref('')
 
 let searchTid = 0 as any
-const onTagInput = (e: MultiSelectFilterEvent) => {
-  currTagFilterValue.value = e.value
-  clearTimeout(searchTid)
-  /** 搜索标签结果 */
-  searchTid = setTimeout(() => {
-    searchTags(currTagFilterValue.value).then((res) => {
-      tagOptions.value = res
-    })
-  }, 100)
-}
 
-const onTagFilterEnter = async () => {
-  /** 没有输入值 */
-  if (!currTagFilterValue.value) return
-  /** 当前已经存在标签选项 */
-  if (tagOptions.value.length) return
-
-  await postAddTag({ id: 0, name: currTagFilterValue.value, createTime: Date.now() })
-  toast.add({
-    severity: 'secondary',
-    summary: '创建成功',
-    detail: `标签[${currTagFilterValue.value}]`,
-    life: 1200,
-  })
-  searchTags(currTagFilterValue.value).then((res) => {
-    tagOptions.value = res
-  })
-}
-
+// todo
 const searchParams = computed<ISearchFileParams | null>(() => {
   if (!isSearchMode.value) return null
   const res: ISearchFileParams = {
     folderId: currFolderId.value!,
-    condition: selectCondition.value.value,
     startTime: dateRange.value[0] ? dateRange.value[0].getTime() : null,
     endTime: dateRange.value[1] ? dateRange.value[1].getTime() : null,
     keyword: searchValue.value,
     sortBy: selectOrder.value.value,
-    tags: selectedTags.value,
+    // search接口参数怎么传？
+    tagFilters: filterItems.value.map((item) => {
+      return {
+        tagId: item.tagId,
+      }
+    }) as any,
   }
   return res
 })
@@ -650,6 +714,14 @@ const onSearch = async () => {
 }
 
 watch(searchParams, onSearch, { deep: true })
+
+const router = useRouter()
+
+/** 展示标签管理弹窗 */
+const showTagWindow = ref(false)
+const clickTagPage = () => {
+  showTagWindow.value = true
+}
 </script>
 
 <template>
@@ -658,7 +730,9 @@ watch(searchParams, onSearch, { deep: true })
       <div class="title">
         <IconVue />
         <span style="margin-left: 10px">中远海运</span>
+        <Button label="标签管理" @click="clickTagPage" severity="info" variant="text" />
       </div>
+
       <div class="tree">
         <Tree
           :selectionKeys="selectedKey"
@@ -721,6 +795,8 @@ watch(searchParams, onSearch, { deep: true })
             @row-contextmenu="onRowContext"
             @row-click="onRowClick"
             :row-class="getRowClass"
+            scrollable
+            scroll-height="calc(100vh - 230px)"
           >
             <template #empty>
               <div style="display: flex; justify-content: center">
@@ -743,19 +819,22 @@ watch(searchParams, onSearch, { deep: true })
                     v-show="slotProps.data.fileType === 'DOCUMENT'"
                   ></Icon>
                   <span>{{ slotProps.data.name }}</span>
-                  <span>
-                    <Tag
-                      style="margin-left: 10px; margin-top: 2px"
-                      severity="info"
-                      :value="item.name"
-                      v-for="(item, idx) in slotProps.data.tags || []"
-                      :key="idx"
-                    >
-                    </Tag>
-                  </span>
                 </div>
               </template>
             </Column>
+
+            <Column :header="item.label" v-for="item in allTags" :key="item.tagId">
+              <template #body="slotProps: { data: FileItem }">
+                <div class="file-name">
+                  <Tag
+                    v-if="slotProps.data.tags[item.tagId]"
+                    severity="info"
+                    :value="slotProps.data.tags[item.tagId].value"
+                  ></Tag>
+                </div>
+              </template>
+            </Column>
+
             <Column field="updateTime" header="修改时间" style="width: 200px">
               <template #body="slotProps">
                 {{ formatTimestamp(slotProps.data.updateTime) }}
@@ -776,29 +855,92 @@ watch(searchParams, onSearch, { deep: true })
 
       <div class="search-mode" v-if="isSearchMode">
         <div class="filter-options" style="margin-top: 20px; padding-left: 30px">
-          <div class="flex items-center gap-4 mb-4">
-            <label>选择标签</label>
-            <MultiSelect
-              v-model="selectedTags"
-              :options="tagOptions"
-              optionLabel="name"
-              display="chip"
-              show-clear
-              filter
-              :max-selected-labels="8"
-              @filter="onTagInput"
-              placeholder="选择标签"
-              style="width: 400px"
-              emptyFilterMessage="标签不存在，按回车添加"
-              empty-message="请输入标签名搜索"
-            />
+          <div class="flex items-center gap-1 mb-4" style="flex-wrap: wrap">
+            <span v-for="(item, idx) in filterItems" :key="idx">
+              <Tag
+                severity="info"
+                :value="`${item.label}：${item.value}`"
+                style="font-size: 1rem"
+              ></Tag>
+              <Button
+                icon="pi pi-times"
+                severity="danger"
+                size="small"
+                title="移除标签"
+                style="margin-left: -2px"
+                variant="text"
+                rounded
+                aria-label="Cancel"
+                @click="removeSearchTag(item)"
+              />
+            </span>
           </div>
           <div class="flex items-center gap-4 mb-4">
-            <label>标签条件</label>
-            <SelectButton
-              option-label="name"
-              v-model="selectCondition"
-              :options="tagConditionOptions"
+            <label>添加筛选项</label>
+            <Select
+              v-model="selectedTagItem"
+              :options="searchTagOptions"
+              optionLabel="label"
+              placeholder="选择标签"
+              class="w-full md:w-56"
+              style="width: 120px"
+              filter
+            />
+            <InputText
+              v-if="selectedTagItem?.dataType === 'STRING'"
+              type="text"
+              v-model="inputTagValue"
+              placeholder="请输入值"
+            />
+            <span v-if="selectedTagItem?.dataType === 'NUMBER'">
+              <InputNumber
+                size="small"
+                style="width: 100px"
+                v-model="inputNumberTagValue[0]"
+                showButtons
+                fluid
+              />
+              -
+              <InputNumber
+                size="small"
+                style="width: 100px"
+                v-model="inputNumberTagValue[1]"
+                showButtons
+                fluid
+              />
+            </span>
+
+            <span class="flex items-center" v-if="selectedTagItem?.dataType === 'DATE'">
+              <DatePicker
+                showTime
+                hourFormat="24"
+                style="width: 12rem"
+                v-model="inputTagDateRange[0]"
+                :manualInput="false"
+                date-format="yy/mm/dd"
+                show-button-bar
+                fluid
+              />
+              -
+              <DatePicker
+                showTime
+                hourFormat="24"
+                style="width: 12rem"
+                v-model="inputTagDateRange[1]"
+                :manualInput="false"
+                date-format="yy/mm/dd"
+                show-button-bar
+                fluid
+              />
+            </span>
+
+            <Button
+              :disabled="!selectedTagItem"
+              @click="clickAddFilterItem"
+              label="确认添加"
+              size="small"
+              severity="success"
+              v-if="selectedTagItem"
             />
           </div>
           <div class="flex items-center gap-4 mb-4">
@@ -824,13 +966,13 @@ watch(searchParams, onSearch, { deep: true })
               show-button-bar
               fluid
             />
-            <Button
+            <!-- <Button
               label="清除"
               v-show="dateRange[0] || dateRange[1]"
               severity="secondary"
               variant="text"
               @click="clearDateRange"
-            />
+            /> -->
           </div>
         </div>
         <div class="search-res">
@@ -839,7 +981,7 @@ watch(searchParams, onSearch, { deep: true })
             @row-contextmenu="onRowContext"
             @row-click="onRowClick"
             :row-class="getRowClass"
-            :show-headers="false"
+            :show-headers="true"
           >
             <template #header>
               <div class="flex flex-wrap items-center justify-start gap-2">
@@ -852,21 +994,11 @@ watch(searchParams, onSearch, { deep: true })
                 />
               </div>
             </template>
-            <Column field="name" header="">
+            <Column field="name" header="文件名">
               <template #body="slotProps: { data: ISearchResItem }">
                 <div class="file-name" style="font-size: 1.25rem">
                   <Icon icon="bx:file" color="#cccccc" width="28"></Icon>
                   <span>{{ slotProps.data.name }}</span>
-                  <span>
-                    <Tag
-                      style="margin-left: 10px; margin-top: 2px"
-                      severity="info"
-                      :value="item.name"
-                      v-for="(item, idx) in slotProps.data.tags || []"
-                      :key="idx"
-                    >
-                    </Tag>
-                  </span>
                 </div>
                 <div class="card flex flex-wrap gap-4">
                   <Message
@@ -875,6 +1007,18 @@ watch(searchParams, onSearch, { deep: true })
                     variant="simple"
                     >{{ slotProps.data.description }}</Message
                   >
+                </div>
+              </template>
+            </Column>
+
+            <Column :header="item.label" v-for="item in allTags" :key="item.tagId">
+              <template #body="slotProps: { data: FileItem }">
+                <div class="file-name">
+                  <Tag
+                    v-if="slotProps.data.tags[item.tagId]"
+                    severity="info"
+                    :value="slotProps.data.tags[item.tagId].value"
+                  ></Tag>
                 </div>
               </template>
             </Column>
@@ -930,43 +1074,49 @@ watch(searchParams, onSearch, { deep: true })
       </div>
     </Dialog>
 
-    <Dialog
-      v-model:visible="ShowRenameFileDialog"
-      modal
-      header="文件重命名"
-      :style="{ width: '32rem' }"
-    >
-      <div class="flex items-center gap-4 mb-4" style="margin-top: 10px">
-        <label class="w-24">旧名</label>
+    <Dialog v-model:visible="ShowEditDialog" modal header="文件修改" :style="{ width: '48rem' }">
+      <div class="flex items-center gap-4 mb-4" style="margin-top: 10px" v-if="editFileData">
+        <label class="w-16">文件名</label>
         <InputText
           placeholder=""
-          v-model="fileRenameData!.oldName"
-          id="name"
+          v-model="editFileData.name"
           class="flex-auto"
-          disabled
           autocomplete="off"
         />
       </div>
-      <div class="flex items-center gap-4 mb-4" style="margin-top: 10px">
-        <label class="w-24">新名</label>
-        <InputText
-          placeholder=""
-          v-model="fileRenameData!.newName"
-          id="name"
-          class="flex-auto"
-          autocomplete="off"
-        />
+      <div class="flex gap-4 mb-4" style="margin-top: 10px" v-if="editFileData">
+        <label class="w-16">标签</label>
+        <div style="display: flex; flex-wrap: wrap">
+          <div
+            class="tag-item"
+            style="margin-left: 10px; margin-bottom: 10px"
+            v-for="item in allTags"
+            :key="item.tagId"
+          >
+            <IftaLabel v-show="editFileData.tags[item.tagId]">
+              <InputText
+                :id="item.tagId"
+                v-model="editFileData.tags[item.tagId].value"
+                variant="filled"
+                style="width: 130px"
+              />
+              <label :for="item.tagId">{{ item.label }}</label>
+            </IftaLabel>
+          </div>
+        </div>
       </div>
       <div class="flex justify-end gap-2">
         <Button
           type="button"
           label="取消"
           severity="secondary"
-          @click="ShowRenameFileDialog = false"
+          @click="ShowEditDialog = false"
         ></Button>
-        <Button type="button" label="确认" @click="clickConfirmRename"></Button>
+        <Button type="button" label="确认" @click="clickConfirmEditFile"></Button>
       </div>
     </Dialog>
+
+    <TagWindow v-model="showTagWindow"></TagWindow>
   </div>
 </template>
 
