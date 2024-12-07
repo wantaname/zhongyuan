@@ -691,12 +691,12 @@ const searchParams = computed<ISearchFileParams | null>(() => {
     endTime: dateRange.value[1] ? dateRange.value[1].getTime() : null,
     keyword: searchValue.value,
     sortBy: selectOrder.value.value,
-    // search接口参数怎么传？
     tagFilters: filterItems.value.map((item) => {
       return {
         tagId: item.tagId,
+        param: item.value,
       }
-    }) as any,
+    }),
   }
   return res
 })
@@ -1099,7 +1099,7 @@ const clickTagPage = () => {
             v-for="item in allTags"
             :key="item.tagId"
           >
-            <IftaLabel v-show="editFileData.tags[item.tagId]">
+            <IftaLabel v-if="editFileData.tags[item.tagId]">
               <InputText
                 :id="item.tagId"
                 v-model="editFileData.tags[item.tagId].value"

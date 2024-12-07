@@ -218,7 +218,7 @@ export interface ISearchFileParams {
   keyword: string
   sortBy: string
   // todo
-  tagFilters: { tagId: string }
+  tagFilters: { tagId: string; param: string }[]
   documentType?: string[]
 }
 
