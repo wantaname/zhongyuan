@@ -38,6 +38,10 @@ import { useToast } from 'primevue/usetoast'
 import { useRouter } from 'vue-router'
 import TagWindow from './components/tags/index.vue'
 import { cloneDeep, filter } from 'lodash'
+import { useResizableSidebar } from '@/hooks/useResizableSidebar'
+
+// 默认宽度 300px，最小宽度 150px，最大宽度 600px
+const { sidebarWidth, handleMouseDown } = useResizableSidebar(300, 150, 600)
 
 const toast = useToast()
 type FileId = string
@@ -726,7 +730,7 @@ const clickTagPage = () => {
 
 <template>
   <div class="home-view">
-    <div class="left">
+    <div class="left" :style="{ width: sidebarWidth + 'px' }">
       <div class="title">
         <IconVue />
         <span style="margin-left: 10px">中远海运</span>
@@ -746,6 +750,9 @@ const clickTagPage = () => {
           loading-mode="icon"
         ></Tree>
       </div>
+    </div>
+    <div class="resizer" @mousedown="handleMouseDown">
+      <div class="resizer-line"></div>
     </div>
     <div class="right">
       <div class="header" style="display: flex; min-width: 300px">
@@ -1121,6 +1128,21 @@ const clickTagPage = () => {
 </template>
 
 <style scoped lang="scss">
+.resizer {
+  margin-left: -3px;
+  width: 5px;
+  cursor: ew-resize;
+  background-color: transparent;
+  user-select: none; /* 禁止选择文本 */
+  .resizer-line {
+    width: 1px;
+    height: 100%;
+    cursor: ew-resize;
+    background-color: #d2d2d2b4;
+    margin-left: 2px;
+    user-select: none; /* 禁止选择文本 */
+  }
+}
 .home-view {
   width: 100%;
   height: 100vh;
