@@ -751,9 +751,8 @@ const clickTagPage = () => {
         ></Tree>
       </div>
     </div>
-    <div class="resizer" @mousedown="handleMouseDown">
-      <div class="resizer-line"></div>
-    </div>
+
+    <div class="resizer" @mousedown="handleMouseDown"></div>
     <div class="right">
       <div class="header" style="display: flex; min-width: 300px">
         <IconField style="width: 70%">
@@ -1129,21 +1128,15 @@ const clickTagPage = () => {
 
 <style scoped lang="scss">
 .resizer {
-  margin-left: -3px;
+  margin-left: -5px;
   width: 5px;
   cursor: ew-resize;
   background-color: transparent;
   user-select: none; /* 禁止选择文本 */
-  .resizer-line {
-    width: 1px;
-    height: 100%;
-    cursor: ew-resize;
-    background-color: #d2d2d2b4;
-    margin-left: 2px;
-    user-select: none; /* 禁止选择文本 */
-  }
+  border-right: 1px solid #d2d2d2b4;
 }
 .home-view {
+  display: flex;
   width: 100%;
   height: 100vh;
   margin-top: 0;
@@ -1157,7 +1150,8 @@ const clickTagPage = () => {
 }
 
 .right {
-  width: calc(100vw - 380px);
+  // width: calc(100vw - 380px);
+  flex-grow: 1;
   padding: 20px 20px;
 
   .header {
