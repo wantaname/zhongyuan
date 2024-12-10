@@ -292,14 +292,11 @@ const addTag = () => {
     :style="{ width: '85rem', height: '50rem' }"
   >
     <div class="tag-table">
-      <DataTable editMode="cell" :value="tagList" showGridlines tableStyle="min-width: 900px">
+      <DataTable :value="tagList" showGridlines tableStyle="min-width: 900px">
         <Column field="tagId" header="tagId"></Column>
         <Column field="label" header="标签名">
           <template #body="{ data, field }: { data: TagItem; field: string }">
             {{ data.label }}
-          </template>
-          <template #editor="{ data, field }: { data: TagItem; field: string }">
-            <InputText v-model="data.label" autofocus />
           </template>
         </Column>
         <Column field="dataType" header="属性">
@@ -308,16 +305,6 @@ const addTag = () => {
               {{ getDataType(slotProps.data.dataType) }}
             </div>
           </template>
-          <template #editor="{ data, field }: { data: TagItem; field: string }">
-            <Select
-              v-model="data.dataType"
-              :options="datatTypeOption"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="请选择"
-              class="w-full"
-            />
-          </template>
         </Column>
         <Column field="isList" header="是否数组">
           <template #body="slotProps: { data: TagItem }">
@@ -325,32 +312,12 @@ const addTag = () => {
               {{ slotProps.data.isList ? '是' : '否' }}
             </div>
           </template>
-          <template #editor="{ data, field }: { data: TagItem; field: string }">
-            <Select
-              v-model="data.isList"
-              :options="booleanOption"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="请选择"
-              class="w-full"
-            />
-          </template>
         </Column>
         <Column field="isCanSearch" header="能否搜索">
           <template #body="slotProps: { data: TagItem }">
             <div>
               {{ slotProps.data.isCanSearch ? '能' : '否' }}
             </div>
-          </template>
-          <template #editor="{ data, field }: { data: TagItem; field: string }">
-            <Select
-              v-model="data.isCanSearch"
-              :options="booleanOption"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="请选择"
-              class="w-full"
-            />
           </template>
         </Column>
         <Column field="index" header="顺序">
@@ -368,16 +335,6 @@ const addTag = () => {
                 :value="slotProps.data.isActive ? '是' : '否'"
               ></Tag>
             </div>
-          </template>
-          <template #editor="{ data, field }: { data: TagItem; field: string }">
-            <Select
-              v-model="data.isActive"
-              :options="booleanOption"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="请选择"
-              class="w-full"
-            />
           </template>
         </Column>
 
