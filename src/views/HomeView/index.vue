@@ -234,7 +234,7 @@ const clickConfirmEditFile = async () => {
   const tags: Record<string, TagValueItem> = {}
   for (let key in editFileData.value.tags) {
     if (
-      editFileData.value.tags[key].value !== undefined ||
+      editFileData.value.tags[key].value !== undefined &&
       editFileData.value.tags[key].value !== null
     ) {
       tags[key] = editFileData.value.tags[key]
@@ -483,7 +483,7 @@ const contextItems = computed<MenuItem[]>(() => {
       command: handleContextClick,
     },
     {
-      label: '重命名',
+      label: '修改',
       icon: 'pi pi-file-edit',
       command: handleContextClick,
     },
