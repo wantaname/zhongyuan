@@ -39,6 +39,7 @@ import { useRouter } from 'vue-router'
 import TagWindow from './components/tags/index.vue'
 import { cloneDeep, filter } from 'lodash'
 import { useResizableSidebar } from '@/hooks/useResizableSidebar'
+import inputList from '@/components/inputList/index.vue'
 
 // 默认宽度 300px，最小宽度 150px，最大宽度 600px
 const { sidebarWidth, handleMouseDown } = useResizableSidebar(300, 150, 600)
@@ -230,10 +231,22 @@ const clickCancelSave = async () => {
 const clickConfirmEditFile = async () => {
   if (!editFileData.value) return
   const name = editFileData.value.name
+  const tags: Record<string, TagValueItem> = {}
+  for (let key in editFileData.value.tags) {
+    if (
+      editFileData.value.tags[key].value !== undefined ||
+      editFileData.value.tags[key].value !== null
+    ) {
+      tags[key] = editFileData.value.tags[key]
+      if (tags[key].isList) {
+        tags[key].value = tags[key].value.filter((item: any) => !!item)
+      }
+    }
+  }
   updateFile({
     fileId: editFileData.value.fileId,
     name: editFileData.value.name,
-    tags: editFileData.value.tags,
+    tags: tags,
   })
     .then(() => {
       toast.add({
@@ -428,7 +441,10 @@ const handleContextClick = (ev: MenuItemCommandEvent) => {
     editFileData.value = cloneDeep({ ...contextSelectRow.value })
     for (const item of allTags.value) {
       if (!editFileData.value.tags[item.tagId]) {
-        editFileData.value.tags[item.tagId] = { ...item, value: '' }
+        editFileData.value.tags[item.tagId] = { ...item, value: undefined }
+        if (item.isList) {
+          editFileData.value.tags[item.tagId].value = []
+        }
       }
     }
     ShowEditDialog.value = true
@@ -1100,59 +1116,56 @@ watch(showTagWindow, (v) => {
       v-model:visible="ShowEditDialog"
       modal
       header="文件修改"
-      :style="{ width: '34rem' }"
+      :style="{ width: '38rem' }"
     >
-      <div class="flex items-center gap-4 mb-4" style="margin-top: 10px" v-if="editFileData">
-        <label class="w-16">文件名</label>
-        <InputText
-          placeholder=""
-          v-model="editFileData.name"
-          class="flex-auto"
-          autocomplete="off"
-        />
-      </div>
-
-      <div
-        class="flex items-center gap-4 mb-4"
-        style="margin-top: 10px"
-        v-for="(item, idx) in Object.values(editFileData.tags)"
-        :key="idx"
-      >
-        <label class="w-16">{{ item.label }}</label>
-        <InputText
-          v-if="item.dataType === 'STRING' && !item.isList"
-          placeholder=""
-          v-model="item.value"
-          class="flex-auto"
-          autocomplete="off"
-        />
-
-        <InputNumber
-          v-if="item.dataType === 'NUMBER'"
-          v-model="item.value"
-          class="flex-auto"
-          showButtons
-        />
-
-        <span v-if="item.dataType === 'STRING' && item.isList">
-          <!-- <InputText
+      <div :style="{ 'max-height': '40rem', 'padding-right': '5rem' }">
+        <div class="flex items-start gap-4 mb-4" style="margin-top: 10px" v-if="editFileData">
+          <label class="edit-file-label">文件名</label>
+          <InputText
             placeholder=""
-            v-for="listItem in item."
+            v-model="editFileData.name"
+            class="flex-auto"
+            autocomplete="off"
+          />
+        </div>
+
+        <div
+          class="flex items-start gap-4 mb-4"
+          style="margin-top: 10px"
+          v-for="(item, idx) in Object.values(editFileData.tags)"
+          :key="idx"
+        >
+          <label class="edit-file-label">{{ item.label }}</label>
+          <InputText
+            v-if="item.dataType === 'STRING' && !item.isList"
+            placeholder=""
             v-model="item.value"
             class="flex-auto"
             autocomplete="off"
-          /> -->
-        </span>
-      </div>
+          />
 
-      <div class="flex justify-end gap-2">
-        <Button
-          type="button"
-          label="取消"
-          severity="secondary"
-          @click="ShowEditDialog = false"
-        ></Button>
-        <Button type="button" label="确认" @click="clickConfirmEditFile"></Button>
+          <InputNumber
+            v-if="item.dataType === 'NUMBER'"
+            v-model="item.value"
+            class="flex-auto"
+            showButtons
+          />
+
+          <span v-if="item.dataType === 'STRING' && item.isList">
+            <!-- <Chip :label="v" :key="i" v-for="(v, i) in item.value || []" removable /> -->
+            <inputList v-model="item.value"></inputList>
+          </span>
+        </div>
+
+        <div class="flex justify-end gap-2 pb-5">
+          <Button
+            type="button"
+            label="取消"
+            severity="secondary"
+            @click="ShowEditDialog = false"
+          ></Button>
+          <Button type="button" label="确认" @click="clickConfirmEditFile"></Button>
+        </div>
       </div>
     </Dialog>
 
@@ -1161,6 +1174,11 @@ watch(showTagWindow, (v) => {
 </template>
 
 <style scoped lang="scss">
+.edit-file-label {
+  text-align: right;
+  width: 6rem;
+  min-width: 6rem;
+}
 .resizer {
   margin-left: -5px;
   width: 5px;
