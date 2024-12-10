@@ -181,7 +181,7 @@ export interface TagValueItem {
   isCanSearch: boolean
   index: number
   isActive: boolean
-  value: string
+  value: string | number | string[] | any
 }
 
 export interface TagItem {
@@ -194,13 +194,31 @@ export interface TagItem {
   isActive: boolean
 }
 
-/** 创建标签 */
-/** 创建文件夹 */
-export function postAddTag(params: TagValueItem) {
+type AddTagItemParams = Omit<TagItem, 'tagId'>
+
+export function postAddTag(params: AddTagItemParams) {
   return request({
     method: 'post',
-    url: '/api/v1/tag/add',
+    url: '/api/v1/tag/config/saveOrUpdate',
     data: params,
+  })
+}
+
+export function postEditTag(params: TagItem) {
+  return request({
+    method: 'post',
+    url: '/api/v1/tag/config/saveOrUpdate',
+    data: params,
+  })
+}
+
+export function postDelTag(tagId: string) {
+  return request({
+    method: 'post',
+    url: '/api/v1/tag/config/delete',
+    data: {
+      tagId,
+    },
   })
 }
 

@@ -168,8 +168,12 @@ onMounted(async () => {
 
 const allTags = ref<TagItem[]>([])
 
+const setAllTags = async () => {
+  allTags.value = (await getAllTag()).filter((item) => item.isActive)
+}
+
 onMounted(async () => {
-  allTags.value = await getAllTag()
+  setAllTags()
 })
 
 /** Tree组件内部会先设置expendKeys的值，再emit */
@@ -422,6 +426,11 @@ const handleContextClick = (ev: MenuItemCommandEvent) => {
     })
   } else if (ev.item.label === '修改') {
     editFileData.value = cloneDeep({ ...contextSelectRow.value })
+    for (const item of allTags.value) {
+      if (!editFileData.value.tags[item.tagId]) {
+        editFileData.value.tags[item.tagId] = { ...item, value: '' }
+      }
+    }
     ShowEditDialog.value = true
   }
 }
@@ -726,6 +735,12 @@ const showTagWindow = ref(false)
 const clickTagPage = () => {
   showTagWindow.value = true
 }
+
+watch(showTagWindow, (v) => {
+  if (!v) {
+    setAllTags()
+  }
+})
 </script>
 
 <template>
@@ -1080,7 +1095,13 @@ const clickTagPage = () => {
       </div>
     </Dialog>
 
-    <Dialog v-model:visible="ShowEditDialog" modal header="文件修改" :style="{ width: '48rem' }">
+    <Dialog
+      v-if="editFileData"
+      v-model:visible="ShowEditDialog"
+      modal
+      header="文件修改"
+      :style="{ width: '34rem' }"
+    >
       <div class="flex items-center gap-4 mb-4" style="margin-top: 10px" v-if="editFileData">
         <label class="w-16">文件名</label>
         <InputText
@@ -1090,27 +1111,40 @@ const clickTagPage = () => {
           autocomplete="off"
         />
       </div>
-      <div class="flex gap-4 mb-4" style="margin-top: 10px" v-if="editFileData">
-        <label class="w-16">标签</label>
-        <div style="display: flex; flex-wrap: wrap">
-          <div
-            class="tag-item"
-            style="margin-left: 10px; margin-bottom: 10px"
-            v-for="item in allTags"
-            :key="item.tagId"
-          >
-            <IftaLabel v-if="editFileData.tags[item.tagId]">
-              <InputText
-                :id="item.tagId"
-                v-model="editFileData.tags[item.tagId].value"
-                variant="filled"
-                style="width: 130px"
-              />
-              <label :for="item.tagId">{{ item.label }}</label>
-            </IftaLabel>
-          </div>
-        </div>
+
+      <div
+        class="flex items-center gap-4 mb-4"
+        style="margin-top: 10px"
+        v-for="(item, idx) in Object.values(editFileData.tags)"
+        :key="idx"
+      >
+        <label class="w-16">{{ item.label }}</label>
+        <InputText
+          v-if="item.dataType === 'STRING' && !item.isList"
+          placeholder=""
+          v-model="item.value"
+          class="flex-auto"
+          autocomplete="off"
+        />
+
+        <InputNumber
+          v-if="item.dataType === 'NUMBER'"
+          v-model="item.value"
+          class="flex-auto"
+          showButtons
+        />
+
+        <span v-if="item.dataType === 'STRING' && item.isList">
+          <!-- <InputText
+            placeholder=""
+            v-for="listItem in item."
+            v-model="item.value"
+            class="flex-auto"
+            autocomplete="off"
+          /> -->
+        </span>
       </div>
+
       <div class="flex justify-end gap-2">
         <Button
           type="button"

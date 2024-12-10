@@ -6,6 +6,7 @@ import PrimeVue from 'primevue/config'
 import App from './App.vue'
 import router from './router'
 import Aura from '@primevue/themes/aura'
+import Nora from '@primevue/themes/nora'
 import Material from '@primevue/themes/material'
 import 'primeicons/primeicons.css'
 import ToastService from 'primevue/toastservice'
@@ -16,7 +17,7 @@ app.use(createPinia())
 app.use(router)
 app.use(PrimeVue, {
   theme: {
-    preset: Aura,
+    preset: Nora,
   },
   locale: {
     today: '今天',

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
+import DialogComponent from './components/dialog/DialogComponent.vue'
 </script>
 
 <template>
   <RouterView />
   <Toast></Toast>
+  <DialogComponent></DialogComponent>
 </template>
 
 <style scoped>
