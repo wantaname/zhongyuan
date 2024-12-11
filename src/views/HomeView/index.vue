@@ -40,6 +40,7 @@ import TagWindow from './components/tags/index.vue'
 import { cloneDeep, filter } from 'lodash'
 import { useResizableSidebar } from '@/hooks/useResizableSidebar'
 import inputList from '@/components/inputList/index.vue'
+import inputTagList from '@/components/inputList/tags.vue'
 
 // 默认宽度 300px，最小宽度 150px，最大宽度 600px
 const { sidebarWidth, handleMouseDown } = useResizableSidebar(300, 150, 600)
@@ -240,6 +241,10 @@ const clickConfirmEditFile = async () => {
       tags[key] = editFileData.value.tags[key]
       if (tags[key].isList) {
         tags[key].value = tags[key].value.filter((item: any) => !!item)
+      }
+      /** 时间格式转化为时间戳 */
+      if (tags[key].dataType === 'DATE') {
+        tags[key].value = tags[key].value?.getTime() || tags[key].value
       }
     }
   }
@@ -444,6 +449,12 @@ const handleContextClick = (ev: MenuItemCommandEvent) => {
         editFileData.value.tags[item.tagId] = { ...item, value: undefined }
         if (item.isList) {
           editFileData.value.tags[item.tagId].value = []
+        }
+      } else {
+        if (item.dataType === 'DATE') {
+          editFileData.value.tags[item.tagId].value = new Date(
+            editFileData.value.tags[item.tagId].value,
+          )
         }
       }
     }
@@ -679,6 +690,26 @@ const searchTagOptions = computed(() => {
 // const selectedTags = ref<Tag[]>([])
 const dateRange = ref<[Date | null, Date | null]>([null, null])
 // const tagOptions = ref<Tag[]>([])
+const filterTagData = ref<
+  Record<
+    string,
+    { tagId: string; label: string; dataType: 'STRING' | 'NUMBER' | 'DATE'; param: any[] }
+  >
+>({})
+
+const setFilterTagData = () => {
+  for (let tag of allTags.value) {
+    filterTagData.value[tag.tagId] = {
+      tagId: tag.tagId,
+      label: tag.label,
+      dataType: tag.dataType,
+      param: [],
+    }
+  }
+}
+watchEffect(() => {
+  setFilterTagData()
+})
 
 const orderOptions = ref([
   { name: '时间', value: 'TIME' },
@@ -716,10 +747,19 @@ const searchParams = computed<ISearchFileParams | null>(() => {
     endTime: dateRange.value[1] ? dateRange.value[1].getTime() : null,
     keyword: searchValue.value,
     sortBy: selectOrder.value.value,
-    tagFilters: filterItems.value.map((item) => {
+    tagFilters: Object.values(filterTagData.value).map((item) => {
       return {
         tagId: item.tagId,
-        param: item.value,
+        param:
+          item.dataType === 'STRING'
+            ? item.param
+            : {
+                from: item.param[0],
+                to: item.param[1],
+                includeLower: true,
+                includeUpper: true,
+              },
+        condition: 'AND',
       }
     }),
   }
@@ -764,7 +804,7 @@ watch(showTagWindow, (v) => {
     <div class="left" :style="{ width: sidebarWidth + 'px' }">
       <div class="title">
         <IconVue />
-        <span style="margin-left: 10px">中远海运</span>
+        <span style="margin-left: 10px">文件管理</span>
         <Button label="标签管理" @click="clickTagPage" severity="info" variant="text" />
       </div>
 
@@ -892,125 +932,89 @@ watch(showTagWindow, (v) => {
 
       <div class="search-mode" v-if="isSearchMode">
         <div class="filter-options" style="margin-top: 20px; padding-left: 30px">
-          <div class="flex items-center gap-1 mb-4" style="flex-wrap: wrap">
-            <span v-for="(item, idx) in filterItems" :key="idx">
-              <Tag
-                severity="info"
-                :value="`${item.label}：${item.value}`"
-                style="font-size: 1rem"
-              ></Tag>
-              <Button
-                icon="pi pi-times"
-                severity="danger"
-                size="small"
-                title="移除标签"
-                style="margin-left: -2px"
-                variant="text"
-                rounded
-                aria-label="Cancel"
-                @click="removeSearchTag(item)"
-              />
-            </span>
-          </div>
-          <div class="flex items-center gap-4 mb-4">
-            <label>添加筛选项</label>
-            <Select
-              v-model="selectedTagItem"
-              :options="searchTagOptions"
-              optionLabel="label"
-              placeholder="选择标签"
-              class="w-full md:w-56"
-              style="width: 120px"
-              filter
-            />
-            <InputText
-              v-if="selectedTagItem?.dataType === 'STRING'"
-              type="text"
-              v-model="inputTagValue"
-              placeholder="请输入值"
-            />
-            <span v-if="selectedTagItem?.dataType === 'NUMBER'">
-              <InputNumber
-                size="small"
-                style="width: 100px"
-                v-model="inputNumberTagValue[0]"
-                showButtons
-                fluid
-              />
-              -
-              <InputNumber
-                size="small"
-                style="width: 100px"
-                v-model="inputNumberTagValue[1]"
-                showButtons
-                fluid
-              />
-            </span>
+          <Fieldset legend="筛选项" style="--p-fieldset-legend-border-width: 0px">
+            <div style="max-height: 16rem; overflow: auto">
+              <div class="flex items-center gap-4 mb-2">
+                <label class="edit-file-label">上传时间</label>
+                <span>
+                  <DatePicker
+                    showTime
+                    hourFormat="24"
+                    style="width: 12rem"
+                    placeholder="选择起始时间"
+                    v-model:model-value="dateRange[0]"
+                    :manualInput="false"
+                    date-format="yy/mm/dd"
+                    show-button-bar
+                  />
+                  -
+                  <DatePicker
+                    showTime
+                    hourFormat="24"
+                    style="width: 12rem"
+                    placeholder="选择结束时间"
+                    v-model="dateRange[1]"
+                    :manualInput="false"
+                    date-format="yy/mm/dd"
+                    show-button-bar
+                  />
+                </span>
+              </div>
 
-            <span class="flex items-center" v-if="selectedTagItem?.dataType === 'DATE'">
-              <DatePicker
-                showTime
-                hourFormat="24"
-                style="width: 12rem"
-                v-model="inputTagDateRange[0]"
-                :manualInput="false"
-                date-format="yy/mm/dd"
-                show-button-bar
-                fluid
-              />
-              -
-              <DatePicker
-                showTime
-                hourFormat="24"
-                style="width: 12rem"
-                v-model="inputTagDateRange[1]"
-                :manualInput="false"
-                date-format="yy/mm/dd"
-                show-button-bar
-                fluid
-              />
-            </span>
+              <div
+                class="flex items-center gap-4 mb-2"
+                v-for="tagItem in filterTagData"
+                :key="tagItem.tagId"
+              >
+                <label class="edit-file-label">{{ tagItem.label }}</label>
+                <span v-if="tagItem.dataType === 'DATE'">
+                  <DatePicker
+                    showTime
+                    hourFormat="24"
+                    style="width: 12rem"
+                    v-model="tagItem.param[0]"
+                    :manualInput="false"
+                    placeholder="选择起始时间"
+                    date-format="yy/mm/dd"
+                    show-button-bar
+                  />
+                  -
+                  <DatePicker
+                    showTime
+                    hourFormat="24"
+                    style="width: 12rem"
+                    v-model="tagItem.param[1]"
+                    :manualInput="false"
+                    date-format="yy/mm/dd"
+                    placeholder="选择结束时间"
+                    show-button-bar
+                  />
+                </span>
 
-            <Button
-              :disabled="!selectedTagItem"
-              @click="clickAddFilterItem"
-              label="确认添加"
-              size="small"
-              severity="success"
-              v-if="selectedTagItem"
-            />
-          </div>
-          <div class="flex items-center gap-4 mb-4">
-            <label>时间范围</label>
-            <DatePicker
-              showTime
-              hourFormat="24"
-              style="width: 12rem"
-              v-model="dateRange[0]"
-              :manualInput="false"
-              date-format="yy/mm/dd"
-              show-button-bar
-              fluid
-            />
-            -
-            <DatePicker
-              showTime
-              hourFormat="24"
-              style="width: 12rem"
-              v-model="dateRange[1]"
-              :manualInput="false"
-              date-format="yy/mm/dd"
-              show-button-bar
-              fluid
-            />
-            <!-- <Button
-              label="清除"
-              v-show="dateRange[0] || dateRange[1]"
-              severity="secondary"
-              variant="text"
-              @click="clearDateRange"
-            /> -->
-          </div>
+                <span v-if="tagItem.dataType === 'STRING'">
+                  <inputTagList v-model:model-value="tagItem.param"></inputTagList>
+                </span>
+
+                <span v-if="tagItem.dataType === 'NUMBER'">
+                  <InputNumber
+                    placeholder="最小值"
+                    style="width: 10rem"
+                    v-model="tagItem.param[0]"
+                    showButtons
+                    fluid
+                  />
+                  -
+                  <InputNumber
+                    placeholder="最大值"
+                    style="width: 10rem"
+                    v-model="tagItem.param[1]"
+                    showButtons
+                    fluid
+                  />
+                </span>
+              </div>
+            </div>
+          </Fieldset>
         </div>
         <div class="search-res">
           <DataTable
@@ -1149,6 +1153,18 @@ watch(showTagWindow, (v) => {
             v-model="item.value"
             class="flex-auto"
             showButtons
+          />
+
+          <DatePicker
+            showTime
+            v-if="item.dataType === 'DATE'"
+            hourFormat="24"
+            style="width: 12rem"
+            placeholder=""
+            v-model="item.value"
+            :manualInput="false"
+            date-format="yy/mm/dd"
+            show-button-bar
           />
 
           <span v-if="item.dataType === 'STRING' && item.isList">

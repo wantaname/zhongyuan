@@ -34,7 +34,7 @@ const getTestTags = (count: number) => {
   })
 }
 
-interface FolderInfo {
+export interface FolderInfo {
   /** 每个文件夹或者文件的唯一id */
   fileId: string
   /** 文件项的父目录的id */
@@ -236,7 +236,7 @@ export interface ISearchFileParams {
   keyword: string
   sortBy: string
   // todo
-  tagFilters: { tagId: string; param: string }[]
+  tagFilters: { tagId: string; param: any; condition: 'AND' | 'OR' }[]
   documentType?: string[]
 }
 

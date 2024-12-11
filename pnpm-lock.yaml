@@ -13,15 +13,24 @@ importers:
       '@primevue/themes':
         specifier: ^4.2.3
         version: 4.2.3
+      '@types/mockjs':
+        specifier: ^1.0.10
+        version: 1.0.10
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.20(postcss@8.4.49)
       axios:
         specifier: ^1.7.8
         version: 1.7.8
+      cross-env:
+        specifier: ^7.0.3
+        version: 7.0.3
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
+      mockjs:
+        specifier: ^1.1.0
+        version: 1.1.0
       pinia:
         specifier: ^2.2.6
         version: 2.2.6(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3))
@@ -1168,6 +1177,13 @@ packages:
         tarball: https://registry.npmmirror.com/@types/lodash/-/lodash-4.17.13.tgz,
       }
 
+  '@types/mockjs@1.0.10':
+    resolution:
+      {
+        integrity: sha512-SXgrhajHG7boLv6oU93CcmdDm0HYRiceuz6b+7z+/2lCJPTWDv0V5YiwFHT2ejE4bQqgSXQiVPQYPWv7LGsK1g==,
+        tarball: https://registry.npmmirror.com/@types/mockjs/-/mockjs-1.0.10.tgz,
+      }
+
   '@types/node@22.9.3':
     resolution:
       {
@@ -1669,6 +1685,7 @@ packages:
     resolution:
       {
         integrity: sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA==,
+        tarball: https://registry.npmmirror.com/commander/-/commander-4.1.1.tgz,
       }
     engines: { node: '>= 6' }
 
@@ -1696,6 +1713,15 @@ packages:
         integrity: sha512-yCEafptTtb4bk7GLEQoM8KVJpxAfdBJYaXyzQEgQQQgYrZiDp8SJmGKlYza6CYjEDNstAdNdKA3UuoULlEbS6w==,
       }
     engines: { node: '>=12.13' }
+
+  cross-env@7.0.3:
+    resolution:
+      {
+        integrity: sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==,
+        tarball: https://registry.npmmirror.com/cross-env/-/cross-env-7.0.3.tgz,
+      }
+    engines: { node: '>=10.14', npm: '>=6', yarn: '>=1' }
+    hasBin: true
 
   cross-spawn@7.0.6:
     resolution:
@@ -2577,6 +2603,14 @@ packages:
       {
         integrity: sha512-xUsx5n/mN0uQf4V548PKQ+YShA4/IW0KI1dZhrNrPCLG+xizETbHTkOa1f8/xut9JRPp8kQuMnz0oqwkTiLo/A==,
       }
+
+  mockjs@1.1.0:
+    resolution:
+      {
+        integrity: sha512-eQsKcWzIaZzEZ07NuEyO4Nw65g0hdWAyurVol1IPl1gahRwY+svqzfgfey8U8dahLwG44d6/RwEzuK52rSa/JQ==,
+        tarball: https://registry.npmmirror.com/mockjs/-/mockjs-1.1.0.tgz,
+      }
+    hasBin: true
 
   mrmime@2.0.0:
     resolution:
@@ -4121,6 +4155,8 @@ snapshots:
 
   '@types/lodash@4.17.13': {}
 
+  '@types/mockjs@1.0.10': {}
+
   '@types/node@22.9.3':
     dependencies:
       undici-types: 6.19.8
@@ -4515,6 +4551,10 @@ snapshots:
   copy-anything@3.0.5:
     dependencies:
       is-what: 4.1.16
+
+  cross-env@7.0.3:
+    dependencies:
+      cross-spawn: 7.0.6
 
   cross-spawn@7.0.6:
     dependencies:
@@ -4987,6 +5027,10 @@ snapshots:
       pathe: 1.1.2
       pkg-types: 1.2.1
       ufo: 1.5.4
+
+  mockjs@1.1.0:
+    dependencies:
+      commander: 4.1.1
 
   mrmime@2.0.0: {}
 
