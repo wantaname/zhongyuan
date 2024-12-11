@@ -1213,6 +1213,7 @@ watch(showTagWindow, (v) => {
   .left {
     width: 380px;
     height: 100%;
+    overflow: auto;
     background-color: rgb(245, 245, 245);
   }
 }
