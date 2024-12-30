@@ -170,10 +170,13 @@ onMounted(async () => {
 
 const allTags = ref<TagItem[]>([])
 
+const formatTagList = (tabValue: string | string[]) => {
+  if (typeof tabValue === 'string') return [tabValue]
+  return tabValue
+}
 const setAllTags = async () => {
   allTags.value = (await getAllTag()).filter((item) => item.isActive)
 }
-
 onMounted(async () => {
   setAllTags()
 })
@@ -902,11 +905,12 @@ watch(showTagWindow, (v) => {
 
             <Column :header="item.label" v-for="item in allTags" :key="item.tagId">
               <template #body="slotProps: { data: FileItem }">
-                <div class="file-name">
+                <div class="file-name" v-if="slotProps.data.tags[item.tagId]">
                   <Tag
-                    v-if="slotProps.data.tags[item.tagId]"
+                    style="margin-right: 5px"
                     severity="info"
-                    :value="slotProps.data.tags[item.tagId].value"
+                    :value="it"
+                    v-for="(it, idx) in formatTagList(slotProps.data.tags[item.tagId].value)"
                   ></Tag>
                 </div>
               </template>
@@ -1054,11 +1058,12 @@ watch(showTagWindow, (v) => {
 
             <Column :header="item.label" v-for="item in allTags" :key="item.tagId">
               <template #body="slotProps: { data: FileItem }">
-                <div class="file-name">
+                <div class="file-name" v-if="slotProps.data.tags[item.tagId]">
                   <Tag
-                    v-if="slotProps.data.tags[item.tagId]"
+                    style="margin-right: 5px"
                     severity="info"
-                    :value="slotProps.data.tags[item.tagId].value"
+                    :value="it"
+                    v-for="(it, idx) in formatTagList(slotProps.data.tags[item.tagId].value)"
                   ></Tag>
                 </div>
               </template>
