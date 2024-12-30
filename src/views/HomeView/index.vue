@@ -938,7 +938,7 @@ watch(showTagWindow, (v) => {
         <div class="filter-options" style="margin-top: 20px; padding-left: 30px">
           <Fieldset legend="筛选项" style="--p-fieldset-legend-border-width: 0px">
             <div style="max-height: 16rem; overflow: auto">
-              <div class="flex items-center gap-4 mb-2">
+              <div class="flex items-center gap-4 mb-2" style="margin-top: 10px">
                 <label class="edit-file-label">上传时间</label>
                 <span>
                   <DatePicker
@@ -967,6 +967,7 @@ watch(showTagWindow, (v) => {
 
               <div
                 class="flex items-center gap-4 mb-2"
+                style="margin-top: 20px"
                 v-for="tagItem in filterTagData"
                 :key="tagItem.tagId"
               >
