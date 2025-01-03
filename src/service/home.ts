@@ -51,12 +51,22 @@ export interface FolderInfo {
 }
 
 /** 获取文件夹信息 */
-export function getFolder(folderId?: string): Promise<{ folder: FileItem; files: FileItem[] }> {
+export function getFolder(
+  folderId: string | undefined,
+  pn: number,
+  ps: number,
+): Promise<{
+  folder: FileItem
+  files: FileItem[]
+  page: { pn: number; ps: number; total: number }
+}> {
   return request<any, any>({
     method: 'get',
     url: 'api/v1/file/folder/detail',
     params: {
       folderId,
+      pn,
+      ps,
     },
   }).then((data: any) => {
     return {
@@ -86,6 +96,11 @@ export function getFolder(folderId?: string): Promise<{ folder: FileItem; files:
         url: item.url || '',
         tags: item.tags || {},
       })),
+      page: {
+        pn: data.pn,
+        ps: data.ps,
+        total: data.total,
+      },
     }
   })
 }

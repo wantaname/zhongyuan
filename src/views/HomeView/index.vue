@@ -5,6 +5,7 @@ import type {
   DataTableRowClickEvent,
   DataTableRowContextMenuEvent,
   MultiSelectFilterEvent,
+  PageState,
   TieredMenu,
 } from 'primevue'
 import Tree from 'primevue/tree'
@@ -41,6 +42,7 @@ import { cloneDeep, filter } from 'lodash'
 import { useResizableSidebar } from '@/hooks/useResizableSidebar'
 import inputList from '@/components/inputList/index.vue'
 import inputTagList from '@/components/inputList/tags.vue'
+import Paginator from 'primevue/paginator'
 
 // 默认宽度 300px，最小宽度 150px，最大宽度 600px
 const { sidebarWidth, handleMouseDown } = useResizableSidebar(300, 150, 600)
@@ -57,6 +59,31 @@ const currExpandFolderIds = ref<FileId[]>([])
 const selectedKey = ref<Record<string, boolean>>({})
 const expandedKeys = ref<Record<FileId, boolean>>({})
 
+const pagination = ref({
+  ps: 100,
+  total: 1000,
+  pn: 1,
+  sizeOption: [50, 100, 200],
+})
+
+const onPageSizeChange = (v: number) => {
+  console.log('pageSize', v)
+}
+
+const onPageNumChange = (v: number) => {
+  console.log('pageNum', v)
+}
+
+/** pageNum从0开始，每次点击都会触发这个函数 */
+const onPageChange = (state: PageState) => {
+  console.log('ss', state)
+  const ps = state.rows
+  const pn = state.page + 1
+  if (ps === pagination.value.ps && pn === pagination.value.pn) return
+  pagination.value.ps = ps
+  pagination.value.pn = pn
+  getTableData()
+}
 watchEffect(() => {
   if (!currFolderId.value) {
     selectedKey.value = {}
@@ -131,7 +158,7 @@ const onNodeCollapse = (node: TreeNode) => {
 const folderNodes = ref<TreeNode[]>([])
 
 const getRootData = async () => {
-  const res = await getFolder()
+  const res = await getFolder('', pagination.value.pn, pagination.value.ps)
   folderNodes.value = [res].map(({ folder, files }) => {
     return {
       key: folder.fileId,
@@ -188,7 +215,7 @@ const onNodeExpand = async (node: TreeNode) => {
     return
   }
   node.loading = true
-  const res = await getFolder(node.key)
+  const res = await getFolder(node.key, pagination.value.pn, pagination.value.ps)
   node.children = res.files
     .filter((item) => item.fileType === 'FOLDER')
     .map((it) => {
@@ -356,8 +383,10 @@ const tableData = ref<FileItem[]>([])
 const getTableData = async () => {
   if (!currFolderId.value) tableData.value = []
   else {
-    const res = await getFolder(currFolderId.value)
+    const res = await getFolder(currFolderId.value, pagination.value.pn, pagination.value.ps)
     tableData.value = res.files
+    /** todo:total */
+    pagination.value.total = res.page.total || tableData.value.length
   }
 }
 
@@ -577,7 +606,7 @@ const clickCloseSearch = () => {
 
 const onFileStatusChange = async () => {
   /** 刷新当前节点的信息 */
-  const res = await getFolder(currFolderId.value)
+  const res = await getFolder(currFolderId.value, pagination.value.pn, pagination.value.ps)
   selectedNode.value!.children = res.files
     .filter((item) => item.fileType === 'FOLDER')
     .map((it) => {
@@ -877,7 +906,7 @@ watch(showTagWindow, (v) => {
             @row-click="onRowClick"
             :row-class="getRowClass"
             scrollable
-            scroll-height="calc(100vh - 230px)"
+            scroll-height="calc(100vh - 260px)"
           >
             <template #empty>
               <div style="display: flex; justify-content: center">
@@ -932,6 +961,17 @@ watch(showTagWindow, (v) => {
                 /> </template
             ></Column>
           </DataTable>
+        </div>
+        <div class="pagination">
+          <Paginator
+            :rows="pagination.ps"
+            :totalRecords="pagination.total"
+            :rowsPerPageOptions="pagination.sizeOption"
+            :first="pagination.ps * (pagination.pn - 1)"
+            @page="onPageChange"
+          >
+            <template #start="slotProps"> 共 {{ pagination.total }} 条 </template></Paginator
+          >
         </div>
       </div>
 
