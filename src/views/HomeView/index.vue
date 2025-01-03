@@ -806,7 +806,8 @@ watch(showTagWindow, (v) => {
   <div class="home-view">
     <div class="left" :style="{ width: sidebarWidth + 'px' }">
       <div class="title">
-        <IconVue />
+        <!-- <IconVue /> -->
+        <img style="width: 50px" src="/img.png" alt="" />
         <span style="margin-left: 10px">文件管理</span>
         <Button label="标签管理" @click="clickTagPage" severity="info" variant="text" />
       </div>
