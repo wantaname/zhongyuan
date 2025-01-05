@@ -6,6 +6,7 @@ import DialogComponent from './components/dialog/DialogComponent.vue'
 <template>
   <RouterView />
   <Toast></Toast>
+  <Toast position="bottom-right" group="br"></Toast>
   <DialogComponent></DialogComponent>
 </template>
 

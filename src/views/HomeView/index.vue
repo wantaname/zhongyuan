@@ -366,6 +366,13 @@ const startUploadFile = async () => {
   putFile(file, currFolderId.value)
     .then((res) => {
       onCreateFile()
+      toast.add({
+        severity: 'success',
+        summary: '上传成功',
+        detail: `${res.name}`,
+        group: 'br',
+        life: 3000,
+      })
     })
     .catch((error) => {
       toast.add({
