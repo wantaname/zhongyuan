@@ -60,10 +60,10 @@ const selectedKey = ref<Record<string, boolean>>({})
 const expandedKeys = ref<Record<FileId, boolean>>({})
 
 const pagination = ref({
-  ps: 100,
+  ps: 20,
   total: 1000,
   pn: 1,
-  sizeOption: [50, 100, 200],
+  sizeOption: [20, 50, 100],
 })
 
 const onPageSizeChange = (v: number) => {
@@ -76,7 +76,6 @@ const onPageNumChange = (v: number) => {
 
 /** pageNum从0开始，每次点击都会触发这个函数 */
 const onPageChange = (state: PageState) => {
-  console.log('ss', state)
   const ps = state.rows
   const pn = state.page + 1
   if (ps === pagination.value.ps && pn === pagination.value.pn) return
@@ -385,7 +384,6 @@ const getTableData = async () => {
   else {
     const res = await getFolder(currFolderId.value, pagination.value.pn, pagination.value.ps)
     tableData.value = res.files
-    /** todo:total */
     pagination.value.total = res.page.total || tableData.value.length
   }
 }
@@ -833,7 +831,7 @@ watch(showTagWindow, (v) => {
 
 <template>
   <div class="home-view">
-    <div class="left" :style="{ width: sidebarWidth + 'px' }">
+    <div class="left" :style="{ width: sidebarWidth + 'px', minWidth: sidebarWidth + 'px' }">
       <div class="title">
         <!-- <IconVue /> -->
         <img style="width: 50px" src="/img.png" alt="" />
@@ -857,7 +855,7 @@ watch(showTagWindow, (v) => {
     </div>
 
     <div class="resizer" @mousedown="handleMouseDown"></div>
-    <div class="right">
+    <div class="right" :style="{ width: `calc(100% - ${sidebarWidth}px)` }">
       <div class="header" style="display: flex; min-width: 300px">
         <IconField style="width: 70%">
           <InputIcon class="pi pi-search" />
@@ -913,7 +911,7 @@ watch(showTagWindow, (v) => {
                 <Message severity="secondary" variant="simple">此文件夹为空</Message>
               </div>
             </template>
-            <Column field="name" header="名称">
+            <Column frozen field="name" header="名称" style="min-width: 250px">
               <template #body="slotProps: { data: FileItem }">
                 <div class="file-name">
                   <Icon
@@ -933,11 +931,16 @@ watch(showTagWindow, (v) => {
               </template>
             </Column>
 
-            <Column :header="item.label" v-for="item in allTags" :key="item.tagId">
+            <Column
+              style="max-width: 200px; min-width: 150px"
+              :header="item.label"
+              v-for="item in allTags"
+              :key="item.tagId"
+            >
               <template #body="slotProps: { data: FileItem }">
-                <div class="file-name" v-if="slotProps.data.tags[item.tagId]">
+                <div class="tag-name" v-if="slotProps.data.tags[item.tagId]">
                   <Tag
-                    style="margin-right: 5px"
+                    style="margin-right: 5px; margin-bottom: 3px"
                     severity="info"
                     :value="it"
                     v-for="(it, idx) in formatTagList(slotProps.data.tags[item.tagId].value)"
@@ -946,12 +949,18 @@ watch(showTagWindow, (v) => {
               </template>
             </Column>
 
-            <Column field="updateTime" header="修改时间" style="width: 200px">
+            <Column
+              frozen
+              field="updateTime"
+              alignFrozen="right"
+              header="修改时间"
+              style="min-width: 200px"
+            >
               <template #body="slotProps">
                 {{ formatTimestamp(slotProps.data.updateTime) }}
               </template>
             </Column>
-            <Column header="" style="width: 100px">
+            <Column frozen header="" alignFrozen="right" style="min-width: 100px">
               <template #body="slotProps">
                 <Button
                   @click="onClickRowAction($event, slotProps.data)"
@@ -1069,6 +1078,7 @@ watch(showTagWindow, (v) => {
             @row-click="onRowClick"
             :row-class="getRowClass"
             :show-headers="true"
+            scrollable
           >
             <template #header>
               <div class="flex flex-wrap items-center justify-start gap-2">
@@ -1081,7 +1091,7 @@ watch(showTagWindow, (v) => {
                 />
               </div>
             </template>
-            <Column field="name" header="文件名">
+            <Column field="name" header="文件名" style="min-width: 250px" frozen>
               <template #body="slotProps: { data: ISearchResItem }">
                 <div class="file-name" style="font-size: 1.25rem">
                   <Icon icon="bx:file" color="#cccccc" width="28"></Icon>
@@ -1098,9 +1108,14 @@ watch(showTagWindow, (v) => {
               </template>
             </Column>
 
-            <Column :header="item.label" v-for="item in allTags" :key="item.tagId">
+            <Column
+              style="min-width: 150px; max-width: 200px"
+              :header="item.label"
+              v-for="item in allTags"
+              :key="item.tagId"
+            >
               <template #body="slotProps: { data: FileItem }">
-                <div class="file-name" v-if="slotProps.data.tags[item.tagId]">
+                <div class="tag-name" v-if="slotProps.data.tags[item.tagId]">
                   <Tag
                     style="margin-right: 5px"
                     severity="info"
@@ -1110,7 +1125,7 @@ watch(showTagWindow, (v) => {
                 </div>
               </template>
             </Column>
-            <Column header="" style="width: 100px">
+            <Column header="" style="min-width: 100px" alignFrozen="right" frozen>
               <template #body="slotProps">
                 <Button
                   @click="onClickRowAction($event, slotProps.data)"

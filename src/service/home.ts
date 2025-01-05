@@ -282,7 +282,8 @@ export function searchFile(params: ISearchFileParams): Promise<ISearchResItem[]>
     res.items = res.items || []
     res.items.forEach((item) => {
       item.content = item.content || ''
-      item.tags = item.tags || []
+      item.tags = item.tags || {}
+
       item.url = item.url || ''
       item.description = item.description || ''
     })
