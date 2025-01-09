@@ -160,7 +160,7 @@ export function searchTags(name: string): Promise<TagValueItem[]> {
   return request({
     method: 'get',
     url: '/api/v1/tag/search',
-    params: { name },
+    params: {name},
   })
 }
 
@@ -209,6 +209,19 @@ export interface TagItem {
   isActive: boolean
 }
 
+export interface Folder {
+  folderId: string,
+  name: string;
+  subFiles: Folder[]
+}
+
+export function getAllFolder() {
+  return request({
+    method: "get",
+    url: "/api/v1/file/getAllFolder",
+  })
+}
+
 type AddTagItemParams = Omit<TagItem, 'tagId'>
 
 export function postAddTag(params: AddTagItemParams) {
@@ -246,6 +259,7 @@ export function getAllTag(): Promise<TagItem[]> {
 
 export interface ISearchFileParams {
   folderId: string
+  folderIds: string[] | null
   startTime: number | null
   endTime: number | null
   keyword: string
