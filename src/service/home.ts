@@ -160,7 +160,7 @@ export function searchTags(name: string): Promise<TagValueItem[]> {
   return request({
     method: 'get',
     url: '/api/v1/tag/search',
-    params: {name},
+    params: { name },
   })
 }
 
@@ -210,15 +210,15 @@ export interface TagItem {
 }
 
 export interface Folder {
-  folderId: string,
-  name: string;
+  folderId: string
+  name: string
   subFiles: Folder[]
 }
 
-export function getAllFolder() {
+export function getAllFolder(): Promise<Folder> {
   return request({
-    method: "get",
-    url: "/api/v1/file/getAllFolder",
+    method: 'get',
+    url: '/api/v1/file/getAllFolder',
   })
 }
 
@@ -267,6 +267,8 @@ export interface ISearchFileParams {
   // todo
   tagFilters: { tagId: string; param: any; condition: 'AND' | 'OR' }[]
   documentType?: string[]
+  pageNo: number
+  pageSize: number
 }
 
 export interface ISearchResItem {
@@ -284,9 +286,15 @@ export interface ISearchResItem {
   url: string
 }
 
+interface ISearchRes {
+  items: ISearchResItem[]
+  pageSize: number
+  pageNo: number
+  total: number
+}
 /** 搜索文件 */
-export function searchFile(params: ISearchFileParams): Promise<ISearchResItem[]> {
-  return request<any, { items: ISearchResItem[] }>({
+export function searchFile(params: ISearchFileParams): Promise<ISearchRes> {
+  return request<any, ISearchRes>({
     method: 'post',
     url: '/api/v1/file/search',
     data: {
@@ -301,7 +309,7 @@ export function searchFile(params: ISearchFileParams): Promise<ISearchResItem[]>
       item.url = item.url || ''
       item.description = item.description || ''
     })
-    return res.items
+    return res
   })
 }
 

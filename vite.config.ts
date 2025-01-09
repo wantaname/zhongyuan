@@ -22,7 +22,7 @@ export default defineConfig({
     proxy: {
       '/api': {
         // 匹配以 /api 开头的请求
-        target: 'http://10.13.74.42:8080/', // 目标后端地址
+        target: 'http://124.220.149.108:8080/', // 目标后端地址
         changeOrigin: true, // 改变源以避免跨域问题
       },
     },

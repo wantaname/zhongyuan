@@ -9,7 +9,12 @@ import DialogComponent from './components/dialog/DialogComponent.vue'
   <Toast position="bottom-right" group="br"></Toast>
   <DialogComponent></DialogComponent>
 </template>
-
+<style>
+:root {
+  --p-highlight-color: #2e93f8 !important;
+  --p-highlight-focus-color: #0779f2 !important;
+}
+</style>
 <style scoped>
 header {
   line-height: 1.5;

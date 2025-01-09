@@ -14,6 +14,7 @@ import {
   createFolder,
   deleteFile,
   downloadFile,
+  getAllFolder,
   getAllTag,
   getFolder,
   postAddTag,
@@ -24,6 +25,7 @@ import {
   searchTags,
   updateFile,
   type FileItem,
+  type Folder,
   type IPutFileRes,
   type ISearchFileParams,
   type ISearchResItem,
@@ -61,7 +63,7 @@ const expandedKeys = ref<Record<FileId, boolean>>({})
 
 const pagination = ref({
   ps: 20,
-  total: 1000,
+  total: 0,
   pn: 1,
   sizeOption: [20, 50, 100],
 })
@@ -83,6 +85,14 @@ const onPageChange = (state: PageState) => {
   pagination.value.pn = pn
   getTableData()
 }
+
+const onSearchPageChange = (state: PageState) => {
+  const ps = state.rows
+  const pn = state.page + 1
+  if (ps === searchPagination.value.ps && pn === searchPagination.value.pn) return
+  searchPagination.value.ps = ps
+  searchPagination.value.pn = pn
+}
 watchEffect(() => {
   if (!currFolderId.value) {
     selectedKey.value = {}
@@ -93,7 +103,7 @@ watchEffect(() => {
 
 watchEffect(() => {
   expandedKeys.value = {}
-  for (let k of currExpandFolderIds.value) {
+  for (const k of currExpandFolderIds.value) {
     expandedKeys.value[k] = true
   }
 })
@@ -117,8 +127,8 @@ const getNodeByKey = (key: string, treeNode?: TreeNode): TreeNode | null => {
   }
   if (treeNode.key === key) return treeNode
   if (treeNode.children) {
-    for (let item of treeNode.children) {
-      let r = getNodeByKey(key, item)
+    for (const item of treeNode.children) {
+      const r = getNodeByKey(key, item)
       if (r) return r
     }
   }
@@ -262,7 +272,7 @@ const clickConfirmEditFile = async () => {
   if (!editFileData.value) return
   const name = editFileData.value.name
   const tags: Record<string, TagValueItem> = {}
-  for (let key in editFileData.value.tags) {
+  for (const key in editFileData.value.tags) {
     if (
       editFileData.value.tags[key].value !== undefined &&
       editFileData.value.tags[key].value !== null
@@ -459,7 +469,7 @@ const handleContextClick = (ev: MenuItemCommandEvent) => {
   if (ev.item.label === '打开') {
     openFolder(contextSelectRow.value!.fileId)
   } else if (ev.item.label === '下载') {
-    var url = '/api/v1/file/download?fileId=' + contextSelectRow.value!.fileId
+    const url = '/api/v1/file/download?fileId=' + contextSelectRow.value!.fileId
     downloadUrl(url, contextSelectRow.value!.name)
   } else if (ev.item.label === '删除') {
     deleteFile({ fileId: contextSelectRow.value!.fileId }).then(() => {
@@ -735,7 +745,7 @@ const filterTagData = ref<
 >({})
 
 const setFilterTagData = () => {
-  for (let tag of allTags.value) {
+  for (const tag of allTags.value) {
     filterTagData.value[tag.tagId] = {
       tagId: tag.tagId,
       label: tag.label,
@@ -773,12 +783,15 @@ const searchResData = ref<ISearchResItem[]>([])
 
 const currTagFilterValue = ref('')
 
-let searchTid = 0 as any
+const searchTid = 0 as any
 
 // todo
 const searchParams = computed<ISearchFileParams | null>(() => {
   if (!isSearchMode.value) return null
   const res: ISearchFileParams = {
+    pageNo: searchPagination.value.pn,
+    pageSize: searchPagination.value.ps,
+    folderIds: Object.keys(folderSelectedValue.value || {}),
     folderId: currFolderId.value!,
     startTime: dateRange.value[0] ? dateRange.value[0].getTime() : null,
     endTime: dateRange.value[1] ? dateRange.value[1].getTime() : null,
@@ -805,10 +818,18 @@ const searchParams = computed<ISearchFileParams | null>(() => {
 
 let sid = 0 as any
 
+const searchPagination = ref({
+  ps: 20,
+  total: 0,
+  pn: 1,
+  sizeOption: [20, 50, 100],
+})
+
 const startSearchFile = async () => {
   if (!searchParams.value) return
   const res = await searchFile({ ...searchParams.value })
-  searchResData.value = res
+  searchResData.value = res.items
+  searchPagination.value.total = res.total
 }
 
 const onSearch = async () => {
@@ -816,7 +837,7 @@ const onSearch = async () => {
   clearTimeout(sid)
   sid = setTimeout(() => {
     startSearchFile()
-  }, 500)
+  }, 250)
 }
 
 watch(searchParams, onSearch, { deep: true })
@@ -834,6 +855,43 @@ watch(showTagWindow, (v) => {
     setAllTags()
   }
 })
+
+const folderSelectedValue = ref<Record<string, boolean> | null>(null)
+const folderOptions = ref<any[]>([])
+
+const transformFolderNodes = (node: any): any[] => {
+  return node.subFiles.map((item: any) => {
+    return {
+      key: item.folderId,
+      label: item.name,
+      icon: 'pi pi-folder',
+      data: {
+        path: `${node.name}/${item.name}`,
+      },
+      children: transformFolderNodes(item),
+    }
+  })
+}
+
+watch(isSearchMode, async () => {
+  const res = await getAllFolder()
+  folderOptions.value = [
+    {
+      key: res.folderId,
+      label: res.name,
+      icon: 'pi pi-folder',
+      children: transformFolderNodes(res),
+      data: {
+        path: res.name,
+      },
+    },
+  ]
+  folderSelectedValue.value = { [currFolderId.value + '']: true }
+})
+
+const getFolderSelectPath = (item: any) => {
+  return item.data.path
+}
 </script>
 
 <template>
@@ -995,6 +1053,28 @@ watch(showTagWindow, (v) => {
         <div class="filter-options" style="margin-top: 20px; padding-left: 30px">
           <Fieldset legend="筛选项" style="--p-fieldset-legend-border-width: 0px">
             <div style="max-height: 16rem; overflow: auto">
+              <div class="flex items-start gap-4 mb-2" style="margin-top: 10px">
+                <label class="edit-file-label" style="margin-top: 10px">文件夹选择</label>
+                <span>
+                  <TreeSelect
+                    v-model="folderSelectedValue"
+                    filter
+                    show-clear
+                    selection-mode="multiple"
+                    filterMode="strict"
+                    :options="folderOptions"
+                    placeholder="请选择"
+                    style="width: 25rem"
+                  >
+                    <template #value="scope">
+                      <div v-for="item in scope.value" :key="item.key">
+                        {{ getFolderSelectPath(item) }}
+                      </div>
+                    </template>
+                  </TreeSelect>
+                </span>
+              </div>
+
               <div class="flex items-center gap-4 mb-2" style="margin-top: 10px">
                 <label class="edit-file-label">上传时间</label>
                 <span>
@@ -1142,7 +1222,21 @@ watch(showTagWindow, (v) => {
                 /> </template
             ></Column>
 
-            <template #footer> 共有 {{ searchResData.length }} 条搜索结果</template>
+            <template #footer>
+              <div class="pagination">
+                <Paginator
+                  :rows="searchPagination.ps"
+                  :totalRecords="searchPagination.total"
+                  :rowsPerPageOptions="searchPagination.sizeOption"
+                  :first="searchPagination.ps * (searchPagination.pn - 1)"
+                  @page="onSearchPageChange"
+                >
+                  <template #start="slotProps">
+                    共有 {{ searchPagination.total }} 条搜索结果
+                  </template></Paginator
+                >
+              </div>
+            </template>
           </DataTable>
         </div>
       </div>
@@ -1334,5 +1428,8 @@ watch(showTagWindow, (v) => {
 
 :deep(.table-row:hover) {
   background-color: rgb(229, 243, 255) !important;
+}
+:deep(.p-treeselect-label) {
+  display: block !important;
 }
 </style>
