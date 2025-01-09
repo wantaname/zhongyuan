@@ -947,7 +947,7 @@ watch(showTagWindow, (v) => {
               <template #body="slotProps: { data: FileItem }">
                 <div class="tag-name" v-if="slotProps.data.tags[item.tagId]">
                   <Tag
-                    style="margin-right: 5px; margin-bottom: 3px"
+                    style="margin-right: 5px; margin-bottom: 8px"
                     severity="info"
                     :value="it"
                     v-for="(it, idx) in formatTagList(slotProps.data.tags[item.tagId].value)"
@@ -1124,7 +1124,7 @@ watch(showTagWindow, (v) => {
               <template #body="slotProps: { data: FileItem }">
                 <div class="tag-name" v-if="slotProps.data.tags[item.tagId]">
                   <Tag
-                    style="margin-right: 5px"
+                    style="margin-right: 5px; margin-bottom: 8px"
                     severity="info"
                     :value="it"
                     v-for="(it, idx) in formatTagList(slotProps.data.tags[item.tagId].value)"
