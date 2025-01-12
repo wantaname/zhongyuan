@@ -264,6 +264,8 @@ export interface ISearchFileParams {
   endTime: number | null
   keyword: string
   sortBy: string
+  searchContent: boolean
+  searchName: boolean
   // todo
   tagFilters: { tagId: string; param: any; condition: 'AND' | 'OR' }[]
   documentType?: string[]

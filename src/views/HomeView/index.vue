@@ -9,7 +9,7 @@ import type {
   TieredMenu,
 } from 'primevue'
 import Tree from 'primevue/tree'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
+import {computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect} from 'vue'
 import {
   createFolder,
   deleteFile,
@@ -32,22 +32,22 @@ import {
   type TagItem,
   type TagValueItem,
 } from '@/service/home'
-import type { TreeNode } from 'primevue/treenode'
-import type { MenuItem, MenuItemCommandEvent } from 'primevue/menuitem'
+import type {TreeNode} from 'primevue/treenode'
+import type {MenuItem, MenuItemCommandEvent} from 'primevue/menuitem'
 import createFolderBtn from './components/create-folder-btn.vue'
-import { downloadUrl, formatTimestamp, selectLocalFile } from './utils'
-import { Icon } from '@iconify/vue'
-import { useToast } from 'primevue/usetoast'
-import { useRouter } from 'vue-router'
+import {downloadUrl, formatTimestamp, selectLocalFile} from './utils'
+import {Icon} from '@iconify/vue'
+import {useToast} from 'primevue/usetoast'
+import {useRouter} from 'vue-router'
 import TagWindow from './components/tags/index.vue'
-import { cloneDeep, filter } from 'lodash'
-import { useResizableSidebar } from '@/hooks/useResizableSidebar'
+import {cloneDeep, filter} from 'lodash'
+import {useResizableSidebar} from '@/hooks/useResizableSidebar'
 import inputList from '@/components/inputList/index.vue'
 import inputTagList from '@/components/inputList/tags.vue'
 import Paginator from 'primevue/paginator'
 
 // 默认宽度 300px，最小宽度 150px，最大宽度 600px
-const { sidebarWidth, handleMouseDown } = useResizableSidebar(300, 150, 600)
+const {sidebarWidth, handleMouseDown} = useResizableSidebar(300, 150, 600)
 
 const toast = useToast()
 type FileId = string
@@ -97,7 +97,7 @@ watchEffect(() => {
   if (!currFolderId.value) {
     selectedKey.value = {}
   } else if (!selectedKey.value[currFolderId.value]) {
-    selectedKey.value = { [currFolderId.value]: true }
+    selectedKey.value = {[currFolderId.value]: true}
   }
 })
 
@@ -157,7 +157,8 @@ const makeSelectFolder = (fileId: string) => {
 const onNodeSelect = (node: TreeNode) => {
   currFolderId.value = node.key
 }
-const onNodeUnSelect = (node: TreeNode) => {}
+const onNodeUnSelect = (node: TreeNode) => {
+}
 
 const onNodeCollapse = (node: TreeNode) => {
   currExpandFolderIds.value = currExpandFolderIds.value.filter((it) => it !== node.key)
@@ -168,7 +169,7 @@ const folderNodes = ref<TreeNode[]>([])
 
 const getRootData = async () => {
   const res = await getFolder('', pagination.value.pn, pagination.value.ps)
-  folderNodes.value = [res].map(({ folder, files }) => {
+  folderNodes.value = [res].map(({folder, files}) => {
     return {
       key: folder.fileId,
       label: folder.name,
@@ -193,7 +194,7 @@ const getRootData = async () => {
   })
   currFolderId.value = folderNodes.value[0].key
   // currExpandFolderIds.value = [folderNodes.value[0].key]
-  selectedKey.value = { [folderNodes.value[0].key]: true }
+  selectedKey.value = {[folderNodes.value[0].key]: true}
   // expandedKeys.value = {
   //   [folderNodes.value[0].key]: true,
   // }
@@ -410,7 +411,7 @@ watch(
   async (v) => {
     getTableData()
   },
-  { immediate: true },
+  {immediate: true},
 )
 
 const contextSelectRow = ref<FileItem | null>(null)
@@ -472,7 +473,7 @@ const handleContextClick = (ev: MenuItemCommandEvent) => {
     const url = '/api/v1/file/download?fileId=' + contextSelectRow.value!.fileId
     downloadUrl(url, contextSelectRow.value!.name)
   } else if (ev.item.label === '删除') {
-    deleteFile({ fileId: contextSelectRow.value!.fileId }).then(() => {
+    deleteFile({fileId: contextSelectRow.value!.fileId}).then(() => {
       toast.add({
         severity: 'success',
         summary: '删除成功',
@@ -490,10 +491,10 @@ const handleContextClick = (ev: MenuItemCommandEvent) => {
       }
     })
   } else if (ev.item.label === '修改') {
-    editFileData.value = cloneDeep({ ...contextSelectRow.value })
+    editFileData.value = cloneDeep({...contextSelectRow.value})
     for (const item of allTags.value) {
       if (!editFileData.value.tags[item.tagId]) {
-        editFileData.value.tags[item.tagId] = { ...item, value: undefined }
+        editFileData.value.tags[item.tagId] = {...item, value: undefined}
         if (item.isList) {
           editFileData.value.tags[item.tagId].value = []
         }
@@ -735,6 +736,9 @@ const searchTagOptions = computed(() => {
 
 /** 选择的标签 */
 // const selectedTags = ref<Tag[]>([])
+const searchName = ref(true)
+const searchContent = ref(true)
+
 const dateRange = ref<[Date | null, Date | null]>([null, null])
 // const tagOptions = ref<Tag[]>([])
 const filterTagData = ref<
@@ -759,10 +763,10 @@ watchEffect(() => {
 })
 
 const orderOptions = ref([
-  { name: '时间', value: 'TIME' },
-  { name: '相关度', value: 'RELEVANCE' },
+  {name: '相关度', value: 'RELEVANCE'},
+  {name: '时间', value: 'TIME'},
 ])
-const selectOrder = ref({ name: '时间', value: 'TIME' })
+const selectOrder = ref({name: '相关度', value: 'RELEVANCE'})
 
 // const listenTagInputKeyUp = (ev: KeyboardEvent) => {
 //   if (ev.key !== 'Enter') return
@@ -797,6 +801,8 @@ const searchParams = computed<ISearchFileParams | null>(() => {
     endTime: dateRange.value[1] ? dateRange.value[1].getTime() : null,
     keyword: searchValue.value,
     sortBy: selectOrder.value.value,
+    searchContent: searchContent.value,
+    searchName: searchName.value,
     tagFilters: Object.values(filterTagData.value).map((item) => {
       return {
         tagId: item.tagId,
@@ -804,11 +810,11 @@ const searchParams = computed<ISearchFileParams | null>(() => {
           item.dataType === 'STRING'
             ? item.param
             : {
-                from: item.param[0],
-                to: item.param[1],
-                includeLower: true,
-                includeUpper: true,
-              },
+              from: item.param[0],
+              to: item.param[1],
+              includeLower: true,
+              includeUpper: true,
+            },
         condition: 'AND',
       }
     }),
@@ -827,7 +833,7 @@ const searchPagination = ref({
 
 const startSearchFile = async () => {
   if (!searchParams.value) return
-  const res = await searchFile({ ...searchParams.value })
+  const res = await searchFile({...searchParams.value})
   searchResData.value = res.items
   searchPagination.value.total = res.total
 }
@@ -840,7 +846,7 @@ const onSearch = async () => {
   }, 250)
 }
 
-watch(searchParams, onSearch, { deep: true })
+watch(searchParams, onSearch, {deep: true})
 
 const router = useRouter()
 
@@ -886,7 +892,7 @@ watch(isSearchMode, async () => {
       },
     },
   ]
-  folderSelectedValue.value = { [currFolderId.value + '']: true }
+  folderSelectedValue.value = {[currFolderId.value + '']: true}
 })
 
 const getFolderSelectPath = (item: any) => {
@@ -899,9 +905,9 @@ const getFolderSelectPath = (item: any) => {
     <div class="left" :style="{ width: sidebarWidth + 'px', minWidth: sidebarWidth + 'px' }">
       <div class="title">
         <!-- <IconVue /> -->
-        <img style="width: 50px" src="/img.png" alt="" />
+        <img style="width: 50px" src="/img.png" alt=""/>
         <span style="margin-left: 10px">文件管理</span>
-        <Button label="标签管理" @click="clickTagPage" severity="info" variant="text" />
+        <Button label="标签管理" @click="clickTagPage" severity="info" variant="text"/>
       </div>
 
       <div class="tree">
@@ -923,8 +929,8 @@ const getFolderSelectPath = (item: any) => {
     <div class="right" :style="{ width: `calc(100% - ${sidebarWidth}px)` }">
       <div class="header" style="display: flex; min-width: 300px">
         <IconField style="width: 70%">
-          <InputIcon class="pi pi-search" />
-          <InputText style="width: 100%" v-model="searchValue" placeholder="搜索" />
+          <InputIcon class="pi pi-search"/>
+          <InputText style="width: 100%" v-model="searchValue" placeholder="搜索"/>
         </IconField>
         <Button
           style="margin-left: 10px"
@@ -938,7 +944,7 @@ const getFolderSelectPath = (item: any) => {
       </div>
       <div class="list-mode" v-if="!isSearchMode">
         <div class="nav">
-          <Breadcrumb :model="breadCrumItems" />
+          <Breadcrumb :model="breadCrumItems"/>
         </div>
         <div class="action">
           <div class="upload">
@@ -1032,8 +1038,10 @@ const getFolderSelectPath = (item: any) => {
                   label=". . ."
                   severity="secondary"
                   variant="text"
-                /> </template
-            ></Column>
+                />
+              </template
+              >
+            </Column>
           </DataTable>
         </div>
         <div class="pagination">
@@ -1044,7 +1052,8 @@ const getFolderSelectPath = (item: any) => {
             :first="pagination.ps * (pagination.pn - 1)"
             @page="onPageChange"
           >
-            <template #start="slotProps"> 共 {{ pagination.total }} 条 </template></Paginator
+            <template #start="slotProps"> 共 {{ pagination.total }} 条</template>
+          </Paginator
           >
         </div>
       </div>
@@ -1053,6 +1062,13 @@ const getFolderSelectPath = (item: any) => {
         <div class="filter-options" style="margin-top: 20px; padding-left: 30px">
           <Fieldset legend="筛选项" style="--p-fieldset-legend-border-width: 0px">
             <div style="max-height: 16rem; overflow: auto">
+              <div class="flex items-center gap-4 mb-2" style="margin-top: 10px">
+                <label class="edit-file-label">搜索名字</label>
+                <input type="checkbox" v-model="searchName">
+
+                <label class="edit-file-label" style="margin-left: 30px">搜索文件夹</label>
+                <input type="checkbox" v-model="searchContent">
+              </div>
               <div class="flex items-start gap-4 mb-2" style="margin-top: 10px">
                 <label class="edit-file-label" style="margin-top: 10px">文件夹选择</label>
                 <span>
@@ -1076,7 +1092,7 @@ const getFolderSelectPath = (item: any) => {
               </div>
 
               <div class="flex items-center gap-4 mb-2" style="margin-top: 10px">
-                <label class="edit-file-label">上传时间</label>
+                <label class="edit-file-label">发布时间</label>
                 <span>
                   <DatePicker
                     showTime
@@ -1169,7 +1185,7 @@ const getFolderSelectPath = (item: any) => {
           >
             <template #header>
               <div class="flex flex-wrap items-center justify-start gap-2">
-                <span class="text-2xl font-bold">搜索结果</span>
+                <span class="text-2xl font-bold" style="margin-right: 10px">搜索结果</span>
                 <SelectButton
                   size="small"
                   option-label="name"
@@ -1189,7 +1205,8 @@ const getFolderSelectPath = (item: any) => {
                     style="margin-left: 30px; margin-top: 10px"
                     severity="secondary"
                     variant="simple"
-                    >{{ slotProps.data.description }}</Message
+                  >{{ slotProps.data.description }}
+                  </Message
                   >
                 </div>
               </template>
@@ -1219,8 +1236,10 @@ const getFolderSelectPath = (item: any) => {
                   label=". . ."
                   severity="secondary"
                   variant="text"
-                /> </template
-            ></Column>
+                />
+              </template
+              >
+            </Column>
 
             <template #footer>
               <div class="pagination">
@@ -1233,7 +1252,8 @@ const getFolderSelectPath = (item: any) => {
                 >
                   <template #start="slotProps">
                     共有 {{ searchPagination.total }} 条搜索结果
-                  </template></Paginator
+                  </template>
+                </Paginator
                 >
               </div>
             </template>
@@ -1241,7 +1261,7 @@ const getFolderSelectPath = (item: any) => {
         </div>
       </div>
 
-      <ContextMenu ref="tableCMenu" :model="contextItems" />
+      <ContextMenu ref="tableCMenu" :model="contextItems"/>
     </div>
 
     <Dialog
@@ -1253,13 +1273,13 @@ const getFolderSelectPath = (item: any) => {
       <div class="flex items-center gap-4 mb-4" style="margin-top: 10px">
         <label class="w-24">文件类型</label>
         <Message size="small" severity="success" variant="outlined"
-          >{{ fileSaveData!.documentType }}
+        >{{ fileSaveData!.documentType }}
         </Message>
       </div>
       <div class="flex gap-4 mb-4 items-center">
         <label class="w-24">文件路径</label>
         <Message size="small" severity="secondary" variant="outlined"
-          >{{ filePathString }}/
+        >{{ filePathString }}/
         </Message>
       </div>
       <div class="flex gap-4 mb-4 items-center">
@@ -1358,6 +1378,7 @@ const getFolderSelectPath = (item: any) => {
   width: 6rem;
   min-width: 6rem;
 }
+
 .resizer {
   margin-left: -5px;
   width: 5px;
@@ -1366,6 +1387,7 @@ const getFolderSelectPath = (item: any) => {
   user-select: none; /* 禁止选择文本 */
   border-right: 1px solid #d2d2d2b4;
 }
+
 .home-view {
   display: flex;
   width: 100%;
@@ -1429,6 +1451,7 @@ const getFolderSelectPath = (item: any) => {
 :deep(.table-row:hover) {
   background-color: rgb(229, 243, 255) !important;
 }
+
 :deep(.p-treeselect-label) {
   display: block !important;
 }
