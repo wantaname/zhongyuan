@@ -796,7 +796,6 @@ const searchParams = computed<ISearchFileParams | null>(() => {
     pageNo: searchPagination.value.pn,
     pageSize: searchPagination.value.ps,
     folderIds: Object.keys(folderSelectedValue.value || {}),
-    folderId: currFolderId.value!,
     startTime: dateRange.value[0] ? dateRange.value[0].getTime() : null,
     endTime: dateRange.value[1] ? dateRange.value[1].getTime() : null,
     keyword: searchValue.value,

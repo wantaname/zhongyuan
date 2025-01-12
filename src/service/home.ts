@@ -160,7 +160,7 @@ export function searchTags(name: string): Promise<TagValueItem[]> {
   return request({
     method: 'get',
     url: '/api/v1/tag/search',
-    params: { name },
+    params: {name},
   })
 }
 
@@ -258,7 +258,6 @@ export function getAllTag(): Promise<TagItem[]> {
 }
 
 export interface ISearchFileParams {
-  folderId: string
   folderIds: string[] | null
   startTime: number | null
   endTime: number | null
@@ -294,6 +293,7 @@ interface ISearchRes {
   pageNo: number
   total: number
 }
+
 /** 搜索文件 */
 export function searchFile(params: ISearchFileParams): Promise<ISearchRes> {
   return request<any, ISearchRes>({
