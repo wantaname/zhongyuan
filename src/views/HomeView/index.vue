@@ -1318,6 +1318,7 @@ const getFolderSelectPath = (item: any) => {
         <div
           class="flex items-start gap-4 mb-4"
           style="margin-top: 10px"
+          v-if = "editFileData.fileType=='DOCUMENT'"
           v-for="(item, idx) in Object.values(editFileData.tags)"
           :key="idx"
         >
