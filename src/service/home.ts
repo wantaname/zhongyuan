@@ -295,7 +295,7 @@ interface ISearchRes {
 }
 
 /** 搜索文件 */
-export function searchFile(params: ISearchFileParams): Promise<ISearchRes> {
+export function searchFile(params:ISearchFileParams): Promise<ISearchRes> {
   return request<any, ISearchRes>({
     method: 'post',
     url: '/api/v1/file/search',

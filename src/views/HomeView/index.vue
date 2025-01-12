@@ -1090,32 +1090,32 @@ const getFolderSelectPath = (item: any) => {
                 </span>
               </div>
 
-              <div class="flex items-center gap-4 mb-2" style="margin-top: 10px">
-                <label class="edit-file-label">发布时间</label>
-                <span>
-                  <DatePicker
-                    showTime
-                    hourFormat="24"
-                    style="width: 12rem"
-                    placeholder="选择起始时间"
-                    v-model:model-value="dateRange[0]"
-                    :manualInput="false"
-                    date-format="yy/mm/dd"
-                    show-button-bar
-                  />
-                  -
-                  <DatePicker
-                    showTime
-                    hourFormat="24"
-                    style="width: 12rem"
-                    placeholder="选择结束时间"
-                    v-model="dateRange[1]"
-                    :manualInput="false"
-                    date-format="yy/mm/dd"
-                    show-button-bar
-                  />
-                </span>
-              </div>
+<!--              <div class="flex items-center gap-4 mb-2" style="margin-top: 10px">-->
+<!--                <label class="edit-file-label">发布时间</label>-->
+<!--                <span>-->
+<!--                  <DatePicker-->
+<!--                    showTime-->
+<!--                    hourFormat="24"-->
+<!--                    style="width: 12rem"-->
+<!--                    placeholder="选择起始时间"-->
+<!--                    v-model:model-value="dateRange[0]"-->
+<!--                    :manualInput="false"-->
+<!--                    date-format="yy/mm/dd"-->
+<!--                    show-button-bar-->
+<!--                  />-->
+<!--                  - -->
+<!--                  <DatePicker-->
+<!--                    showTime-->
+<!--                    hourFormat="24"-->
+<!--                    style="width: 12rem"-->
+<!--                    placeholder="选择结束时间"-->
+<!--                    v-model="dateRange[1]"-->
+<!--                    :manualInput="false"-->
+<!--                    date-format="yy/mm/dd"-->
+<!--                    show-button-bar-->
+<!--                  />-->
+<!--                </span>-->
+<!--              </div>-->
 
               <div
                 class="flex items-center gap-4 mb-2"
