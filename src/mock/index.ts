@@ -19,6 +19,7 @@ const getFolderDetail = (option: MockjsRequestOptions): FolderInfo => {
       createTime: Date.now() - Random.integer(100, 1000000),
       updateTime: Date.now() - Random.integer(100, 1000000),
       url: Random.image(),
+      folderPath: [],
     })
   }
   return {

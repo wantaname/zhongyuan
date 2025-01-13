@@ -22,6 +22,7 @@ export interface FileItem {
   updateTime: number
   /** 文档的链接 */
   url: string
+  folderPath: string[]
 }
 
 /** test */
@@ -82,6 +83,7 @@ export function getFolder(
         updateTime: data.updateTime,
         url: '',
         tags: {},
+        folderPath: data.folderPath || [],
       },
       files: data.files.map((item: any) => ({
         fileId: item.fileId,
@@ -95,6 +97,7 @@ export function getFolder(
         updateTime: item.updateTime,
         url: item.url || '',
         tags: item.tags || {},
+        folderPath: item.folderPath || [],
       })),
       page: {
         pn: data.pn,
@@ -160,7 +163,7 @@ export function searchTags(name: string): Promise<TagValueItem[]> {
   return request({
     method: 'get',
     url: '/api/v1/tag/search',
-    params: {name},
+    params: { name },
   })
 }
 
@@ -295,7 +298,7 @@ interface ISearchRes {
 }
 
 /** 搜索文件 */
-export function searchFile(params:ISearchFileParams): Promise<ISearchRes> {
+export function searchFile(params: ISearchFileParams): Promise<ISearchRes> {
   return request<any, ISearchRes>({
     method: 'post',
     url: '/api/v1/file/search',
