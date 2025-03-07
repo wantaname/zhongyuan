@@ -12,6 +12,7 @@ import type {
 import Tree from 'primevue/tree'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue'
 import {
+  checkExist,
   createFolder,
   deleteFile,
   downloadFile,
@@ -395,6 +396,29 @@ const confirmFilename = () => {
   })
 }
 
+const doUploadFile = (file: File) => {
+  if (!currFolderId.value) return
+  putFile(file, currFolderId.value)
+    .then((res) => {
+      onCreateFile()
+      toast.add({
+        severity: 'success',
+        summary: '上传成功',
+        detail: `${res.name}`,
+        group: 'br',
+        life: 3000,
+      })
+    })
+    .catch((error) => {
+      toast.add({
+        severity: 'error',
+        summary: '上传失败',
+        detail: `${error.message}`,
+        life: 2000,
+      })
+    })
+}
+
 const startUploadFile = async () => {
   if (!currFolderId.value) return
   // mockUploadFile()
@@ -403,34 +427,21 @@ const startUploadFile = async () => {
     accept: '.doc, .docx, .xls, .xlsx, .ppt, .pptx, .txt, .md, .pdf',
   })
 
-  const override = await confirmFilename()
-  if (override) {
-    putFile(file, currFolderId.value)
-      .then((res) => {
-        onCreateFile()
-        toast.add({
-          severity: 'success',
-          summary: '上传成功',
-          detail: `${res.name}`,
-          group: 'br',
-          life: 3000,
-        })
+  const isExist = await checkExist(file.name, currFolderId.value)
+  if (isExist) {
+    const override = await confirmFilename()
+    if (override) {
+      doUploadFile(file)
+    } else {
+      toast.add({
+        severity: 'secondary',
+        summary: '已取消上传',
+        group: 'tr',
+        life: 2000,
       })
-      .catch((error) => {
-        toast.add({
-          severity: 'error',
-          summary: '上传失败',
-          detail: `${error.message}`,
-          life: 2000,
-        })
-      })
+    }
   } else {
-    toast.add({
-      severity: 'secondary',
-      summary: '已取消上传',
-      group: 'tr',
-      life: 2000,
-    })
+    doUploadFile(file)
   }
 }
 
