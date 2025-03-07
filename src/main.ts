@@ -10,12 +10,16 @@ import Lara from '@primevue/themes/lara'
 import Material from '@primevue/themes/material'
 import 'primeicons/primeicons.css'
 import ToastService from 'primevue/toastservice'
+import ConfirmationService from 'primevue/confirmationservice'
+
 // import '@/mock/index'
 
 const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
+app.use(ConfirmationService)
+
 app.use(PrimeVue, {
   theme: {
     preset: Lara,

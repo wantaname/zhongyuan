@@ -3,6 +3,7 @@ import request from '@/utils/request'
 /** 文件/文件夹信息 */
 export interface FileItem {
   fileId: string
+  canUploadFile: boolean
   /** 父文件夹的fileId */
   folderId: string
   /** 文件类型 */
@@ -22,7 +23,7 @@ export interface FileItem {
   updateTime: number
   /** 文档的链接 */
   url: string
-  folderPath: string[]
+  folderPath: { fileId: string; folderIf: string; name: string }[]
 }
 
 /** test */
@@ -84,6 +85,7 @@ export function getFolder(
         url: '',
         tags: {},
         folderPath: data.folderPath || [],
+        canUploadFile: data.canUploadFile,
       },
       files: data.files.map((item: any) => ({
         fileId: item.fileId,

@@ -6,7 +6,10 @@ import DialogComponent from './components/dialog/DialogComponent.vue'
 <template>
   <RouterView />
   <Toast></Toast>
+  <ConfirmDialog></ConfirmDialog>
+
   <Toast position="bottom-right" group="br"></Toast>
+  <Toast position="top-right" group="tr"></Toast>
   <DialogComponent></DialogComponent>
 </template>
 <style>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import IconVue from '@/components/icons/IconVue.vue'
+import { useConfirm } from 'primevue/useconfirm'
 import type {
   ContextMenu,
   DataTableRowClickEvent,
@@ -40,7 +41,7 @@ import { Icon } from '@iconify/vue'
 import { useToast } from 'primevue/usetoast'
 import { useRouter } from 'vue-router'
 import TagWindow from './components/tags/index.vue'
-import { cloneDeep, filter } from 'lodash'
+import { cloneDeep, filter, over } from 'lodash'
 import { useResizableSidebar } from '@/hooks/useResizableSidebar'
 import inputList from '@/components/inputList/index.vue'
 import inputTagList from '@/components/inputList/tags.vue'
@@ -167,7 +168,7 @@ const onNodeCollapse = (node: TreeNode) => {
 const folderNodes = ref<TreeNode[]>([])
 
 const getRootData = async () => {
-  const res = await getFolder('', pagination.value.pn, pagination.value.ps)
+  const res = await getFolderData('', pagination.value.pn, pagination.value.ps)
   folderNodes.value = [res].map(({ folder, files }) => {
     return {
       key: folder.fileId,
@@ -224,7 +225,7 @@ const onNodeExpand = async (node: TreeNode) => {
     return
   }
   node.loading = true
-  const res = await getFolder(node.key, pagination.value.pn, pagination.value.ps)
+  const res = await getFolderData(node.key, pagination.value.pn, pagination.value.ps)
   node.children = res.files
     .filter((item) => item.fileType === 'FOLDER')
     .map((it) => {
@@ -366,6 +367,34 @@ const mockUploadFile = async () => {
   }
   showFileSaveDialog.value = true
 }
+
+const confirm = useConfirm()
+
+/** 同名文件确认框 */
+const confirmFilename = () => {
+  return new Promise((resolve, reject) => {
+    confirm.require({
+      message: '当前目录下存在同名文件，是否覆盖？',
+      header: '上传提示',
+      icon: 'pi pi-exclamation-triangle',
+      rejectProps: {
+        label: '否',
+        severity: 'secondary',
+        outlined: true,
+      },
+      acceptProps: {
+        label: '是',
+      },
+      accept: () => {
+        resolve(true)
+      },
+      reject: () => {
+        resolve(false)
+      },
+    })
+  })
+}
+
 const startUploadFile = async () => {
   if (!currFolderId.value) return
   // mockUploadFile()
@@ -373,25 +402,36 @@ const startUploadFile = async () => {
   const file = await selectLocalFile({
     accept: '.doc, .docx, .xls, .xlsx, .ppt, .pptx, .txt, .md, .pdf',
   })
-  putFile(file, currFolderId.value)
-    .then((res) => {
-      onCreateFile()
-      toast.add({
-        severity: 'success',
-        summary: '上传成功',
-        detail: `${res.name}`,
-        group: 'br',
-        life: 3000,
+
+  const override = await confirmFilename()
+  if (override) {
+    putFile(file, currFolderId.value)
+      .then((res) => {
+        onCreateFile()
+        toast.add({
+          severity: 'success',
+          summary: '上传成功',
+          detail: `${res.name}`,
+          group: 'br',
+          life: 3000,
+        })
       })
-    })
-    .catch((error) => {
-      toast.add({
-        severity: 'error',
-        summary: '上传失败',
-        detail: `${error.message}`,
-        life: 2000,
+      .catch((error) => {
+        toast.add({
+          severity: 'error',
+          summary: '上传失败',
+          detail: `${error.message}`,
+          life: 2000,
+        })
       })
+  } else {
+    toast.add({
+      severity: 'secondary',
+      summary: '已取消上传',
+      group: 'tr',
+      life: 2000,
     })
+  }
 }
 
 const tableData = ref<FileItem[]>([])
@@ -399,7 +439,9 @@ const tableData = ref<FileItem[]>([])
 const getTableData = async () => {
   if (!currFolderId.value) tableData.value = []
   else {
-    const res = await getFolder(currFolderId.value, pagination.value.pn, pagination.value.ps)
+    const res = await getFolderData(currFolderId.value, pagination.value.pn, pagination.value.ps)
+    folderPath.value = res.folder.folderPath
+    canUploadFile.value = res.folder.canUploadFile
     tableData.value = res.files
     pagination.value.total = res.page.total || tableData.value.length
   }
@@ -592,6 +634,17 @@ const handleClickBreadCrum = (ev: MenuItemCommandEvent) => {
 }
 
 const filePathString = ref('')
+const folderPath = ref<any[]>([])
+const canUploadFile = ref(true)
+watch(folderPath, () => {
+  breadCrumItems.value = folderPath.value.map((item, idx) => ({
+    label: item.name,
+    key: item.name,
+    icon: idx === 0 ? 'pi pi-home' : '',
+    command: handleClickBreadCrum,
+  }))
+  filePathString.value = folderPath.value.map((item) => item).join('/')
+})
 
 watch(currFolderId, () => {
   if (!currFolderId.value) return
@@ -606,14 +659,15 @@ watch(currFolderId, () => {
   //   command: handleClickBreadCrum,
   // }))
   // filePathString.value = filePath.map((item) => item.name).join('/')
-  const filePath = currFolderItem.value!.folderPath
-  breadCrumItems.value = filePath.map((item, idx) => ({
-    label: item,
-    key: item,
-    icon: idx === 0 ? 'pi pi-home' : '',
-    command: handleClickBreadCrum,
-  }))
-  filePathString.value = filePath.map((item) => item).join('/')
+  // const filePath = currFolderItem.value!.folderPath
+  // console.log('fff', filePath)
+  // breadCrumItems.value = filePath.map((item, idx) => ({
+  //   label: item.name,
+  //   key: item.name,
+  //   icon: idx === 0 ? 'pi pi-home' : '',
+  //   command: handleClickBreadCrum,
+  // }))
+  // filePathString.value = filePath.map((item) => item).join('/')
 })
 
 const tableCMenu = ref<InstanceType<typeof ContextMenu> | null>(null)
@@ -627,9 +681,14 @@ const clickCloseSearch = () => {
   searchValue.value = ''
 }
 
+const getFolderData = async (folderId: string | undefined, pn: number, ps: number) => {
+  let res = await getFolder(folderId, pn, ps)
+  return res
+}
+
 const onFileStatusChange = async () => {
   /** 刷新当前节点的信息 */
-  const res = await getFolder(currFolderId.value, pagination.value.pn, pagination.value.ps)
+  const res = await getFolderData(currFolderId.value, pagination.value.pn, pagination.value.ps)
   selectedNode.value!.children = res.files
     .filter((item) => item.fileType === 'FOLDER')
     .map((it) => {
@@ -959,6 +1018,8 @@ const getFolderSelectPath = (item: any) => {
               label="上传文件"
               icon-pos="left"
               severity="secondary"
+              :disabled="!canUploadFile"
+              :title="!canUploadFile ? '暂无上传权限' : ''"
               @click="startUploadFile"
               raised
               aria-controls="overlay_upload_menu"
