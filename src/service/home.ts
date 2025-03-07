@@ -161,6 +161,17 @@ export function putFile(file: File, folderId: string): Promise<IPutFileRes> {
   })
 }
 
+export function checkExist(name: string, folderId: string): Promise<boolean> {
+  return request({
+    method: 'get',
+    url: '/api/v1/file/check/exist?folderId=' + folderId + "&fileName=" + name,
+  })
+}
+
+
+
+
+
 export function searchTags(name: string): Promise<TagValueItem[]> {
   return request({
     method: 'get',
