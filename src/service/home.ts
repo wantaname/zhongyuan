@@ -23,7 +23,7 @@ export interface FileItem {
   updateTime: number
   /** 文档的链接 */
   url: string
-  folderPath: { fileId: string; folderIf: string; name: string }[]
+  folderPath: { fileId: string; folderId: string; name: string }[]
 }
 
 /** test */
@@ -164,13 +164,9 @@ export function putFile(file: File, folderId: string): Promise<IPutFileRes> {
 export function checkExist(name: string, folderId: string): Promise<boolean> {
   return request({
     method: 'get',
-    url: '/api/v1/file/check/exist?folderId=' + folderId + "&fileName=" + name,
+    url: '/api/v1/file/check/exist?folderId=' + folderId + '&fileName=' + name,
   })
 }
-
-
-
-
 
 export function searchTags(name: string): Promise<TagValueItem[]> {
   return request({

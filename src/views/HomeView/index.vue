@@ -650,7 +650,7 @@ const canUploadFile = ref(true)
 watch(folderPath, () => {
   breadCrumItems.value = folderPath.value.map((item, idx) => ({
     label: item.name,
-    key: item.name,
+    key: item.fileId,
     icon: idx === 0 ? 'pi pi-home' : '',
     command: handleClickBreadCrum,
   }))
