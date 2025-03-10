@@ -164,7 +164,11 @@ export function putFile(file: File, folderId: string): Promise<IPutFileRes> {
 export function checkExist(name: string, folderId: string): Promise<boolean> {
   return request({
     method: 'get',
-    url: '/api/v1/file/check/exist?folderId=' + folderId + '&fileName=' + name,
+    url: '/api/v1/file/check/exist',
+    params: {
+      folderId,
+      fileName: name,
+    },
   })
 }
 
