@@ -19,11 +19,12 @@ export default defineConfig({
     },
   },
   server: {
+    /** 本地调试后端接口 */
     proxy: {
-      '/api/v1/file/upload': {
-        target: 'http://127.0.0.1:3001', // 目标后端地址
-        changeOrigin: true, // 改变源以避免跨域问题
-      },
+      // '/api/v1/file/upload': {
+      //   target: 'http://127.0.0.1:3001', // 目标后端地址
+      //   changeOrigin: true, // 改变源以避免跨域问题
+      // },
       '/api': {
         // 匹配以 /api 开头的请求
         target: 'http://124.220.149.108:8080', // 目标后端地址
