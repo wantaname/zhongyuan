@@ -47,6 +47,10 @@ import { useResizableSidebar } from '@/hooks/useResizableSidebar'
 import inputList from '@/components/inputList/index.vue'
 import inputTagList from '@/components/inputList/tags.vue'
 import Paginator from 'primevue/paginator'
+import UploadPanel from './components/uploadPanel.vue'
+import axios, { type CancelTokenSource } from 'axios'
+import request from '@/utils/request'
+import { debounce } from 'lodash'
 
 // 默认宽度 300px，最小宽度 150px，最大宽度 600px
 const { sidebarWidth, handleMouseDown } = useResizableSidebar(300, 150, 600)
@@ -654,7 +658,7 @@ watch(folderPath, () => {
     icon: idx === 0 ? 'pi pi-home' : '',
     command: handleClickBreadCrum,
   }))
-  filePathString.value = folderPath.value.map((item) => item).join('/')
+  filePathString.value = folderPath.value.map((item) => item.name).join('/')
 })
 
 watch(currFolderId, () => {
@@ -716,9 +720,11 @@ const onFileStatusChange = async () => {
   getTableData()
 }
 
+const debouncedRefresh = debounce(onFileStatusChange, 1000)
+
 /** 上传文件后，更新状态 */
 const onCreateFile = async () => {
-  onFileStatusChange()
+  debouncedRefresh()
 }
 
 const onCreateFolder = async () => {
@@ -974,6 +980,171 @@ watch(isSearchMode, async () => {
 const getFolderSelectPath = (item: any) => {
   return item.data.path
 }
+
+/** 拖拽上传 */
+const onTableDrop = (event: DragEvent) => {
+  event.stopPropagation()
+  event.preventDefault()
+  fileDraging.value = false
+  const files = event.dataTransfer?.items
+  if (!files) return
+  let fileList: File[] = []
+  for (var i = 0; i < files.length; i++) {
+    let entry = files[i].webkitGetAsEntry()
+    if (!entry) continue
+    if (!entry.isDirectory) {
+      const file = files[i].getAsFile()
+      if (file) fileList.push(file)
+    }
+  }
+  addUploadFiles(fileList)
+}
+
+type FileStatus = 'pending' | 'uploading' | 'completed' | 'error'
+
+interface UploadFile {
+  id: number | string
+  name: string
+  size: number
+  file: File
+  progress: number
+  loaded: number
+  status: FileStatus
+  cancelToken: CancelTokenSource | null
+}
+const fileUploadList = ref<UploadFile[]>([])
+const maxConcurrentUploads = ref(3) // 默认并发数为3
+const activeUploads = ref(0) // 当前活跃的上传任务数
+
+const startFileUpload = () => {
+  // 计算可启动的新上传任务数量
+  const availableSlots = maxConcurrentUploads.value - activeUploads.value
+  if (availableSlots <= 0) return
+  const pendingFiles = fileUploadList.value
+    .filter((f) => f.status === 'pending')
+    .slice(0, availableSlots)
+  pendingFiles.forEach((file) => {
+    file.status = 'uploading'
+    activeUploads.value++ // 增加活跃的上传任务数
+    uploadSingleFile(file).finally(() => {
+      onCreateFile()
+      activeUploads.value-- // 上传完成后减少活跃的上传任务数
+      startFileUpload() // 继续启动新的上传任务
+    })
+  })
+}
+const api = axios.create()
+const uploadSingleFile = async (file: UploadFile) => {
+  const formData = new FormData()
+  formData.append('file', file.file)
+  formData.append('folderId', currFolderId.value!)
+  // 创建取消令牌源
+  const source = axios.CancelToken.source()
+  file.cancelToken = source
+  try {
+    await api({
+      url: '/api/v1/file/upload',
+      method: 'put',
+      data: formData,
+      cancelToken: source.token,
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          file.progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          file.loaded = progressEvent.loaded
+        }
+      },
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    file.status = 'completed'
+    file.progress = 100
+  } catch (error) {
+    console.log('err', error)
+    if (axios.isCancel(error)) {
+      console.log('Upload canceled:', error.message)
+    }
+    file.status = 'error'
+  } finally {
+    file.cancelToken = null
+  }
+}
+
+/** 用户取消上传 */
+const cancelUpload = (file: UploadFile) => {
+  if (file.cancelToken) {
+    file.cancelToken.cancel('Upload canceled by user')
+    activeUploads.value-- // 减少活跃的上传任务数
+  }
+  fileUploadList.value = fileUploadList.value.filter((f) => f.id !== file.id)
+  startFileUpload() // 继续启动新的上传任务
+}
+
+const clearCompleted = () => {
+  fileUploadList.value = fileUploadList.value.filter((f) => f.status !== 'completed')
+}
+const closePanel = () => {
+  // 获取所有上传中的文件
+  const uploadingFiles = fileUploadList.value.filter((f) => f.status === 'uploading')
+  // 取消所有上传中的文件
+  uploadingFiles.forEach((file) => {
+    if (file.cancelToken) {
+      file.cancelToken.cancel('Upload canceled by user')
+    }
+  })
+  // 清空上传列表
+  fileUploadList.value = []
+}
+// 处理重试上传
+const handleRetryUpload = (file: UploadFile) => {
+  // 1. 找到失败的原始文件
+  const index = fileUploadList.value.findIndex((f) => f.id === file.id)
+  if (index === -1) return
+
+  // 2. 更新文件状态为pending
+  fileUploadList.value[index] = {
+    ...fileUploadList.value[index],
+    status: 'pending',
+    progress: 0,
+    loaded: 0,
+  }
+
+  startFileUpload()
+}
+const addUploadFiles = (newFiles: File[]) => {
+  for (let i = 0; i < newFiles.length; i++) {
+    const file = newFiles[i]
+    fileUploadList.value.push({
+      id: Date.now().toString() + i,
+      name: file.name,
+      size: file.size,
+      file: file,
+      progress: 0,
+      loaded: 0,
+      status: 'pending',
+      cancelToken: null,
+    })
+  }
+  startFileUpload()
+}
+
+const fileDraging = ref(false)
+const fileDragingCount = ref(0)
+
+const onTableDragOver = (event: DragEvent) => {
+  event.preventDefault()
+  event.stopPropagation()
+  if (!fileDraging.value) {
+    const files = event.dataTransfer?.items || []
+    fileDragingCount.value = files.length
+    fileDraging.value = true
+  }
+}
+const onTableDragLeave = (event: DragEvent) => {
+  event.preventDefault()
+  event.stopPropagation()
+  fileDraging.value = false
+}
 </script>
 
 <template>
@@ -1002,7 +1173,16 @@ const getFolderSelectPath = (item: any) => {
     </div>
 
     <div class="resizer" @mousedown="handleMouseDown"></div>
-    <div class="right" :style="{ width: `calc(100% - ${sidebarWidth}px)` }">
+    <div
+      class="right"
+      @drop="onTableDrop"
+      @dragover="onTableDragOver"
+      :style="{ width: `calc(100% - ${sidebarWidth}px)` }"
+    >
+      <div class="dragging-box" v-if="fileDraging" @dragleave="onTableDragLeave">
+        上传 <span style="margin: 0 10px">{{ fileDragingCount }}</span> 个文件到
+        <span class="path">{{ filePathString || '/' }}</span>
+      </div>
       <div class="header" style="display: flex; min-width: 300px">
         <IconField style="width: 70%">
           <InputIcon class="pi pi-search" />
@@ -1443,6 +1623,15 @@ const getFolderSelectPath = (item: any) => {
     </Dialog>
 
     <TagWindow v-model="showTagWindow"></TagWindow>
+    <!-- 上传列表 -->
+    <UploadPanel
+      v-if="fileUploadList.length > 0"
+      :files="fileUploadList"
+      @cancel-file="cancelUpload"
+      @clear-completed="clearCompleted"
+      @close-panel="closePanel"
+      @retry-file="handleRetryUpload"
+    />
   </div>
 </template>
 
@@ -1481,7 +1670,7 @@ const getFolderSelectPath = (item: any) => {
   // width: calc(100vw - 380px);
   flex-grow: 1;
   padding: 20px 20px;
-
+  position: relative;
   .header {
     padding-left: 20px;
   }
@@ -1493,6 +1682,27 @@ const getFolderSelectPath = (item: any) => {
   .action {
     display: flex;
     justify-content: flex-end;
+  }
+}
+
+.dragging-box {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 99;
+  border: 2px dashed rgba(19, 16, 16, 0.913);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 22px;
+  color: rgba(5, 118, 224, 0.5);
+
+  background-color: #ffffff7d;
+
+  .path {
+    color: rgba(5, 118, 224, 0.75);
+    font-weight: bold;
+    margin-left: 23px;
   }
 }
 
