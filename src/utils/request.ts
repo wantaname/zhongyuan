@@ -3,7 +3,7 @@ import axios from 'axios'
 // 创建 axios 实例
 const service = axios.create({
   // baseURL: 'http://124.220.149.108:8080/', // 基础路径
-  timeout: 5000, // 请求超时时间
+  timeout: 50000, // 请求超时时间
 })
 
 // 请求拦截器
