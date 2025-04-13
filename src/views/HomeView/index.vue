@@ -427,26 +427,27 @@ const startUploadFile = async () => {
   if (!currFolderId.value) return
   // mockUploadFile()
   // return
-  const file = await selectLocalFile({
-    accept: '.doc, .docx, .xls, .xlsx, .ppt, .pptx, .txt, .md, .pdf',
+  const files = await selectLocalFile({
+    accept: '.doc, .docx, .xls, .xlsx, .ppt, .pptx, .txt, .md, .pdf,.zip',
   })
 
-  const isExist = await checkExist(file.name, currFolderId.value)
-  if (isExist) {
-    const override = await confirmFilename()
-    if (override) {
-      doUploadFile(file)
-    } else {
-      toast.add({
-        severity: 'secondary',
-        summary: '已取消上传',
-        group: 'tr',
-        life: 2000,
-      })
-    }
-  } else {
-    doUploadFile(file)
-  }
+  // const isExist = await checkExist(file.name, currFolderId.value)
+  // if (isExist) {
+  //   const override = await confirmFilename()
+  //   if (override) {
+  //     doUploadFile(file)
+  //   } else {
+  //     toast.add({
+  //       severity: 'secondary',
+  //       summary: '已取消上传',
+  //       group: 'tr',
+  //       life: 2000,
+  //     })
+  //   }
+  // } else {
+  //   doUploadFile(file)
+  // }
+  addUploadFiles(files)
 }
 
 const tableData = ref<FileItem[]>([])
@@ -1010,6 +1011,9 @@ interface UploadFile {
   progress: number
   loaded: number
   status: FileStatus
+  /** 失败原因 */
+  errCode: number | null
+  errMessage: string | null
   cancelToken: CancelTokenSource | null
 }
 const fileUploadList = ref<UploadFile[]>([])
@@ -1038,11 +1042,15 @@ const uploadSingleFile = async (file: UploadFile) => {
   const formData = new FormData()
   formData.append('file', file.file)
   formData.append('folderId', currFolderId.value!)
+  /** 重试的情况 */
+  if (file.errCode) {
+    formData.append('errCode', file.errCode.toString())
+  }
   // 创建取消令牌源
   const source = axios.CancelToken.source()
   file.cancelToken = source
   try {
-    await api({
+    const res = await api({
       url: '/api/v1/file/upload',
       method: 'put',
       data: formData,
@@ -1057,8 +1065,17 @@ const uploadSingleFile = async (file: UploadFile) => {
         'Content-Type': 'multipart/form-data',
       },
     })
-    file.status = 'completed'
-    file.progress = 100
+    const code = res.data.code
+    const errCode = res.data.data.errCode || null
+    const errMessage = res.data.data.errMessage || null
+    if (code === 200) {
+      file.status = 'completed'
+      file.progress = 100
+    } else {
+      file.status = 'error'
+      file.errCode = errCode
+      file.errMessage = errMessage
+    }
   } catch (error) {
     console.log('err', error)
     if (axios.isCancel(error)) {
@@ -1123,6 +1140,8 @@ const addUploadFiles = (newFiles: File[]) => {
       loaded: 0,
       status: 'pending',
       cancelToken: null,
+      errCode: null,
+      errMessage: null,
     })
   }
   startFileUpload()

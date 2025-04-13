@@ -29,13 +29,14 @@ export function downloadUrl(url: string, filename = 'download') {
   document.body.removeChild(a)
 }
 
-export function selectLocalFile(params: { accept: string }): Promise<File> {
+export function selectLocalFile(params: { accept: string }): Promise<File[]> {
   return new Promise((resolve, reject) => {
     // 创建 input 元素，类型为 file
     const input: null | HTMLInputElement = document.createElement('input')
     input.type = 'file'
     input.style.display = 'none'
     input.accept = params.accept
+    input.multiple = true
     document.body.appendChild(input)
 
     let lock = false
@@ -46,10 +47,10 @@ export function selectLocalFile(params: { accept: string }): Promise<File> {
       (event: Event) => {
         lock = true
         const target = event.target as HTMLInputElement
-        const file = target.files?.[0] || null
+        const files: File[] = Array.from(target.files || [])
 
-        if (file) {
-          resolve(file)
+        if (files.length) {
+          resolve(files)
         } else {
           reject(new Error('未选择任何文件'))
         }

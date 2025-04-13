@@ -45,7 +45,7 @@
               <div class="file-status">
                 <span v-if="file.status === 'completed'"> <i class="pi pi-check"></i> 已完成 </span>
                 <span v-else-if="file.status === 'error'">
-                  <i class="pi pi-exclamation-triangle"></i> 上传失败
+                  <i class="pi pi-exclamation-triangle"></i> {{ file.errMessage || '上传失败' }}
                 </span>
                 <span v-else> {{ formatSize(file.loaded) }} / {{ formatSize(file.size) }} </span>
               </div>
@@ -58,12 +58,14 @@
               @click.stop="retryUpload(file)"
               v-if="file.status === 'error'"
             >
-              <i class="pi pi-replay"></i> 重试
+              <i class="pi pi-replay"></i> {{ file.errCode === 1000 ? '确定' : '重试' }}
             </button>
             <button
               class="cancel-btn"
               @click.stop="cancelFile(file)"
-              v-if="file.status === 'pending' || file.status === 'uploading'"
+              v-if="
+                file.status === 'pending' || file.status === 'uploading' || file.status === 'error'
+              "
             >
               <i class="pi pi-times"></i>
             </button>
@@ -117,6 +119,9 @@ interface UploadFile {
   loaded: number
   status: FileStatus
   cancelToken: any
+  /** 失败原因 */
+  errCode: number | null
+  errMessage: string | null
 }
 
 const props = defineProps<{
