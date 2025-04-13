@@ -418,7 +418,7 @@ const doUploadFile = (file: File) => {
         severity: 'error',
         summary: '上传失败',
         detail: `${error.message}`,
-        life: 2000,
+        life: 20000,
       })
     })
 }

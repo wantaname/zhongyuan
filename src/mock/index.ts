@@ -10,6 +10,7 @@ const getFolderDetail = (option: MockjsRequestOptions): FolderInfo => {
     files.push({
       fileId: Random.word(5, 10),
       folderId: Random.word(5, 10),
+      canUploadFile: true,
       fileType: Random.pick(['DOCUMENT', 'FOLDER']),
       tags: {},
       name: Random.ctitle(2, 10),
