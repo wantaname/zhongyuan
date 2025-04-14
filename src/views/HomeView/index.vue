@@ -1066,9 +1066,9 @@ const uploadSingleFile = async (file: UploadFile) => {
       },
     })
     const code = res.data.code
-    const errCode = res.data.data.errCode || null
+    const errCode = res.data.data.errCode || 200
     const errMessage = res.data.data.errMessage || null
-    if (code === 200) {
+    if (errCode === 200) {
       file.status = 'completed'
       file.progress = 100
     } else {
