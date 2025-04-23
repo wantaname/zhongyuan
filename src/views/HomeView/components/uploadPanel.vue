@@ -22,7 +22,7 @@
         <span class="stats-text">
           已上传 {{ completedCount }} 个文件，共 {{ totalUploadedSize }} MB
         </span>
-        <span title="移除已上传的文件">
+        <span title="移除已上传的文件" style="cursor: pointer">
           <i class="pi pi-trash" @click.stop="clearCompleted"></i>
         </span>
       </div>
@@ -46,6 +46,12 @@
                 <span v-if="file.status === 'completed'"> <i class="pi pi-check"></i> 已完成 </span>
                 <span v-else-if="file.status === 'error'">
                   <i class="pi pi-exclamation-triangle"></i> {{ file.errMessage || '上传失败' }}
+                  <span title="复制错误信息" style="color: grey; cursor: pointer">
+                    <i
+                      class="pi pi-copy"
+                      @click.stop="copyErrMsg(file.errMessage || '上传失败')"
+                    ></i>
+                  </span>
                 </span>
                 <span v-else> {{ formatSize(file.loaded) }} / {{ formatSize(file.size) }} </span>
               </div>
@@ -66,6 +72,7 @@
               v-if="
                 file.status === 'pending' || file.status === 'uploading' || file.status === 'error'
               "
+              title="移除文件"
             >
               <i class="pi pi-times"></i>
             </button>
@@ -108,6 +115,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import ProgressBar from 'primevue/progressbar'
+import useClipboard from 'vue-clipboard3'
+import { useToast } from 'primevue/usetoast'
+
 type FileStatus = 'pending' | 'uploading' | 'completed' | 'error'
 
 interface UploadFile {
@@ -128,6 +138,17 @@ const props = defineProps<{
   files: UploadFile[]
 }>()
 
+const { toClipboard } = useClipboard()
+
+const toast = useToast()
+const copyErrMsg = async (msg: string) => {
+  await toClipboard(msg)
+  toast.add({
+    severity: 'success',
+    summary: '复制成功',
+    life: 1000,
+  })
+}
 const emit = defineEmits<{
   (e: 'cancel-file', file: UploadFile): void
   (e: 'clear-completed'): void
